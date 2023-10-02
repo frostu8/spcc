@@ -1,8 +1,11 @@
 //! The tile map that determines grid-locked interactions, such as operators.
 
 use bevy::prelude::*;
-use bevy::render::{mesh::Indices, render_resource::PrimitiveTopology};
 use bevy::transform::TransformSystem;
+
+use serde::{Deserialize, Serialize};
+
+use crate::material::TileHighlightMaterial;
 
 //use iyes_progress::prelude::*;
 
@@ -15,7 +18,7 @@ impl Plugin for GridPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<GridAssets>()
-            .add_systems(Update, scroll_square_mesh)
+            //.add_systems(Update, scroll_square_mesh)
             .add_systems(PostUpdate, setup_new_tiles.before(TransformSystem::TransformPropagate))
             .add_systems(Startup, load_grid_assets);
             //.add_systems(OnEnter(AppState::StageLoading), load_grid_assets);
@@ -31,16 +34,27 @@ pub struct GridAssets {
     /// The grid indicator texture.
     pub grid_indicator_texture: Handle<Image>,
     /// Material for hostile (or damage) tiles.
-    pub hostile_indicator: Handle<StandardMaterial>,
+    pub hostile_indicator: Handle<TileHighlightMaterial>,
     /// Material for support (or healing) tiles.
-    pub support_indicator: Handle<StandardMaterial>,
+    pub support_indicator: Handle<TileHighlightMaterial>,
+}
+
+/// Grid bundle.
+#[derive(Bundle, Default)]
+pub struct GridBundle {
+    pub transform: Transform,
+    pub global_transform: GlobalTransform,
+    pub visibility: Visibility,
+    pub computed_visibility: ComputedVisibility,
+    pub grid: Grid,
 }
 
 /// The grid component.
+#[derive(Clone, Component, Debug, Default)]
 pub struct Grid;
 
-/// The coordinates to a tile.
-#[derive(Clone, Component, Debug, Default)]
+/// The coordinates to a tile entity.
+#[derive(Clone, Component, Debug, Default, Deserialize, Reflect, Serialize)]
 pub struct Coordinates {
     pub x: u32,
     pub y: u32,
@@ -50,13 +64,18 @@ pub struct Coordinates {
 /// 
 /// Actually contains information about the tile. Along with this, also
 /// contains mesh information to render informative data.
-#[derive(Clone, Component, Debug, Default)]
+#[derive(Clone, Component, Debug, Default, Reflect)]
 pub struct Tile {
     kind: TileKind,
     deployable: bool,
 }
 
 impl Tile {
+    /// Creates a new tile.
+    pub fn new(kind: TileKind, deployable: bool) -> Tile {
+        Tile { kind, deployable }
+    }
+
     /// The kind of tile.
     pub fn kind(&self) -> TileKind {
         self.kind
@@ -72,24 +91,24 @@ impl Tile {
 ///
 /// Determines what kind of operators can be deployed, and whether enemies can
 /// cross.
-#[derive(Clone, Copy, Component, Debug, Default)]
+#[derive(Clone, Copy, Component, Debug, Default, Deserialize, Reflect, Serialize)]
 pub enum TileKind {
-    #[default]
     Ground,
+    #[default]
     HighGround,
 }
 
 /// A tile bundle for setting up a [`Tile`].
 ///
 /// Anything besides [`TileBundle::coordinates`] and [`TileBundle::tile`].
-#[derive(Clone, Default, Debug)]
+#[derive(Bundle, Clone, Default, Debug)]
 pub struct TileBundle {
     pub transform: Transform,
     pub global_transform: GlobalTransform,
     pub visibility: Visibility,
     pub computed_visibility: ComputedVisibility,
     pub mesh: Handle<Mesh>,
-    pub material: Handle<StandardMaterial>,
+    pub material: Handle<TileHighlightMaterial>,
     pub coordinates: Coordinates,
     pub tile: Tile,
 }
@@ -112,10 +131,10 @@ pub fn scroll_square_mesh(
 }
 
 pub fn setup_new_tiles(
-    mut query: Query<(&mut Transform, &mut Handle<Mesh>, &Tile, &Coordinates), Added<Tile>>,
+    mut query: Query<(&mut Transform, &mut Handle<Mesh>, &mut Handle<TileHighlightMaterial>, &Tile, &Coordinates), Added<Tile>>,
     grid_assets: Res<GridAssets>,
 ) {
-    for (mut transform, mut mesh, tile, coordinates) in query.iter_mut() {
+    for (mut transform, mut mesh, mut material, tile, coordinates) in query.iter_mut() {
         *mesh = grid_assets.square_mesh.clone();
 
         let height = match tile.kind {
@@ -123,63 +142,37 @@ pub fn setup_new_tiles(
             TileKind::HighGround => 0.5,
         };
 
-        *transform = Transform::from_xyz(coordinates.x as f32 + 0.5, height, coordinates.y as f32 + 0.5);
+        // FIXME: debug tiles
+        *material = grid_assets.hostile_indicator.clone();
+
+        *transform = Transform::from_xyz(-(coordinates.x as f32), height, coordinates.y as f32);
     }
 }
 
 pub fn load_grid_assets(
     mut grid_assets: ResMut<GridAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut tile_materials: ResMut<Assets<TileHighlightMaterial>>,
     //mut loading: ResMut<AssetsLoading>,
     asset_server: Res<AssetServer>,
 ) {
     // create square mesh
-    let mut square_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    square_mesh.insert_attribute(
-        Mesh::ATTRIBUTE_POSITION,
-        vec![[-0.5, 0.0, -0.5], [-0.5, 0.0, 0.5], [0.5, 0.0, 0.5], [0.5, 0.0, -0.5]]
-    );
-    // Assign a UV coordinate to each vertex.
-    square_mesh.insert_attribute(
-        Mesh::ATTRIBUTE_UV_0,
-        vec![[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0]]
-    );
-    // Assign normals (everything points upwards)
-    square_mesh.insert_attribute(
-       Mesh::ATTRIBUTE_NORMAL,
-       vec![[0.0, 1.0, 0.0], [0.0, 1.0, 0.0], [0.0, 1.0, 0.0], [0.0, 1.0, 0.0]]
-    );
-    square_mesh.set_indices(Some(Indices::U32(vec![
-        // First triangle
-        0, 3, 1,
-        // Second triangle
-        0, 3, 2
-    ])));
-
-    // add square mesh to resources
-    grid_assets.square_mesh = meshes.add(square_mesh);
+    grid_assets.square_mesh = meshes.add(Mesh::from(shape::Plane::from_size(1.0)));
 
     // load grid indicator
     grid_assets.grid_indicator_texture = asset_server.load("system/grid_indicator.png");
 
     // create materials
-    grid_assets.hostile_indicator = materials.add(StandardMaterial {
-        base_color: Color::rgba(1.0, 0.576, 0.180, 0.9), // #ff932e
-        base_color_texture: Some(grid_assets.grid_indicator_texture.clone()),
-        alpha_mode: AlphaMode::Blend,
-        depth_bias: 0.05,
-        unlit: true,
-        ..default()
+    grid_assets.hostile_indicator = tile_materials.add(TileHighlightMaterial {
+        color: Color::rgba(1.0, 0.576, 0.180, 0.9), // #ff932e
+        color_texture: Some(grid_assets.grid_indicator_texture.clone()),
+        animate_speed: 0.25,
     });
 
-    grid_assets.support_indicator = materials.add(StandardMaterial {
-        base_color: Color::rgba(0.184, 0.467, 0.922, 0.9), // #2f77eb
-        base_color_texture: Some(grid_assets.grid_indicator_texture.clone()),
-        alpha_mode: AlphaMode::Blend,
-        depth_bias: 0.05,
-        unlit: true,
-        ..default()
+    grid_assets.support_indicator = tile_materials.add(TileHighlightMaterial {
+        color: Color::rgba(0.184, 0.467, 0.922, 0.9), // #2f77eb
+        color_texture: Some(grid_assets.grid_indicator_texture.clone()),
+        animate_speed: 0.25,
     });
 }
 

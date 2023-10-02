@@ -17,6 +17,7 @@ use iyes_progress::prelude::*;
 use bevy_common_assets::ron::RonAssetPlugin;
 
 use crate::AppState;
+use crate::tile_map::{self, GridBundle, TileBundle, Coordinates, TileKind};
 
 /// A map.
 ///
@@ -30,16 +31,10 @@ pub struct Map {
     pub name: String,
     /// Environment settings.
     pub environment: Environment,
+    /// Tile settings.
+    pub tile_map: TileMap,
     /// Static models.
     pub models: Vec<Model>,
-}
-
-/// A static model for a map.
-#[derive(Debug, Clone, Deserialize)]
-pub struct Model {
-    pub path: String,
-    #[serde(default)]
-    pub position: (f32, f32, f32),
 }
 
 /// Environmental display settings for maps.
@@ -54,6 +49,36 @@ pub struct Environment {
     ///
     /// [1]: https://docs.rs/bevy/latest/bevy/prelude/struct.DirectionalLight.html
     pub luminance: f32,
+}
+
+/// Tile map settings.
+#[derive(Debug, Clone, Deserialize)]
+pub struct TileMap {
+    /// The offset of the tilemap.
+    pub offset: Vec3,
+    /// The tiles that make up the tile map.
+    pub tiles: Vec<Tile>,
+}
+
+/// Definition for a single tile.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Tile {
+    /// Position of a tile.
+    pub pos: Coordinates,
+    /// The type of tile.
+    #[serde(default)]
+    pub kind: TileKind,
+    /// Whether the tile is deployable or not.
+    #[serde(default)]
+    pub deployable: bool,
+}
+
+/// A static model for a map.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Model {
+    pub path: String,
+    #[serde(default)]
+    pub position: (f32, f32, f32),
 }
 
 fn from_hex<'de, D>(deserializer: D) -> Result<Color, D::Error>
@@ -170,6 +195,24 @@ fn load_map(
             ..Default::default()
         })
         .set_parent(map_entity);
+
+    // spawn tile map
+    commands
+        .spawn(GridBundle {
+            transform: Transform::from_translation(map.tile_map.offset),
+            ..default()
+        })
+        .with_children(|parent| {
+            // loop through tiles
+            for tile in map.tile_map.tiles.iter() {
+                parent
+                    .spawn(TileBundle {
+                        coordinates: tile.pos.clone(),
+                        tile: tile_map::Tile::new(tile.kind, tile.deployable),
+                        ..default()
+                    });
+            }
+        });
 
     // load models
     for model in map.models.iter() {

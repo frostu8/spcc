@@ -6,13 +6,20 @@ use spcc::stage::{StageLoader, StageBuilder};
 use spcc::enemy::{Checkpoint, Follower, EnemyBundle};
 use spcc::stats::{Stat as _, stat};
 
+#[cfg(feature = "debug")]
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
+
 fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins,
+            #[cfg(feature = "debug")]
+            WorldInspectorPlugin::new(),
             spcc::stage::StagePlugin,
             spcc::enemy::path::PathPlugin,
             spcc::stats::StatPlugin,
+            spcc::tile_map::GridPlugin,
+            spcc::material::MaterialPlugin,
         ))
         .add_state::<AppState>()
         .add_systems(Startup, setup)
@@ -28,7 +35,7 @@ pub fn setup(
 ) {
     // create camera
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(8.0, 10.0, 0.0).looking_at(Vec3::X, Vec3::Y),
+        transform: Transform::from_xyz(0.0, 10.0, -8.0).looking_at(-Vec3::Z, Vec3::Y),
         ..default()
     });
 

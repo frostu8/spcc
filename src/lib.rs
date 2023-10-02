@@ -1,5 +1,6 @@
 pub mod enemy;
 pub mod tile_map;
+pub mod material;
 pub mod stage;
 pub mod stats;
 
