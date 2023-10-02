@@ -172,6 +172,11 @@ fn load_map(
     asset_server: Res<AssetServer>,
     mut loading: ResMut<AssetsLoading>,
 ) {
+    // stop loading if it has already been loaded
+    if stage_loader.map_entity.is_some() {
+        return;
+    }
+
     // check if the map is loaded
     let map = match maps.get(&stage_loader.map) {
         Some(map) => map,
