@@ -1,0 +1,12 @@
+(
+    name: "Domain Subterranean",
+    environment: (
+        color: "#5a6275",
+        luminance: 1500,
+    ),
+    models: [
+        (
+            path: "models/ccmap.glb#Scene0",
+        ),
+    ],
+)
