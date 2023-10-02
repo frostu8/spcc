@@ -9,10 +9,13 @@ use spcc::stats::{Stat as _, stat};
 #[cfg(feature = "debug")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
+use bevy_mod_picking::prelude::*;
+
 fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins,
+            DefaultPickingPlugins,
             #[cfg(feature = "debug")]
             WorldInspectorPlugin::new(),
             spcc::stage::StagePlugin,
@@ -34,10 +37,13 @@ pub fn setup(
     mut app_state: ResMut<NextState<AppState>>
 ) {
     // create camera
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 10.0, -8.0).looking_at(-Vec3::Z, Vec3::Y),
-        ..default()
-    });
+    commands.spawn((
+        Camera3dBundle {
+            transform: Transform::from_xyz(0.0, 10.0, -8.0).looking_at(-Vec3::Z, Vec3::Y),
+            ..default()
+        },
+        RaycastPickCamera::default(),
+    ));
 
     // FIXME: test enemy
     commands

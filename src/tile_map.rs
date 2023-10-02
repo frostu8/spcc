@@ -3,6 +3,8 @@
 use bevy::prelude::*;
 use bevy::transform::TransformSystem;
 
+use bevy_mod_picking::prelude::*;
+
 use serde::{Deserialize, Serialize};
 
 use crate::material::TileHighlightMaterial;
@@ -18,7 +20,8 @@ impl Plugin for GridPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<GridAssets>()
-            //.add_systems(Update, scroll_square_mesh)
+            .add_event::<TileFocusEvent>()
+            .add_systems(Update, color_selected_tiles) // TODO: debug
             .add_systems(PostUpdate, setup_new_tiles.before(TransformSystem::TransformPropagate))
             .add_systems(Startup, load_grid_assets);
             //.add_systems(OnEnter(AppState::StageLoading), load_grid_assets);
@@ -101,7 +104,7 @@ pub enum TileKind {
 /// A tile bundle for setting up a [`Tile`].
 ///
 /// Anything besides [`TileBundle::coordinates`] and [`TileBundle::tile`].
-#[derive(Bundle, Clone, Default, Debug)]
+#[derive(Bundle, Clone, Default)]
 pub struct TileBundle {
     pub transform: Transform,
     pub global_transform: GlobalTransform,
@@ -111,30 +114,37 @@ pub struct TileBundle {
     pub material: Handle<TileHighlightMaterial>,
     pub coordinates: Coordinates,
     pub tile: Tile,
+    pub raycast_pick_target: RaycastPickTarget,
 }
 
-// TODO: Why is this CPU bound but I don't care anymore, it works(TM)
-pub fn scroll_square_mesh(
-    grid_assets: ResMut<GridAssets>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    time: Res<Time>,
-) {
-    if let Some(square_mesh) = meshes.get_mut(&grid_assets.square_mesh) {
-        let zero = -time.delta_seconds();
-        let one = -time.delta_seconds() + 1.0;
+/// An event for when the player taps/clicks on a tile.
+#[derive(Debug, Event)]
+pub struct TileFocusEvent(pub Entity);
 
-        square_mesh.insert_attribute(
-            Mesh::ATTRIBUTE_UV_0,
-            vec![[zero, zero], [zero, one], [one, one], [one, zero]]
-        );
+impl From<ListenerInput<Pointer<Click>>> for TileFocusEvent {
+    fn from(e: ListenerInput<Pointer<Click>>) -> TileFocusEvent {
+        TileFocusEvent(e.target())
+    }
+}
+
+pub fn color_selected_tiles(
+    mut query: Query<&mut Handle<TileHighlightMaterial>>,
+    grid_assets: Res<GridAssets>,
+    mut events: EventReader<TileFocusEvent>,
+) {
+    for event in events.iter() {
+        if let Ok(mut material) = query.get_mut(event.0) {
+            *material = grid_assets.support_indicator.clone();
+        }
     }
 }
 
 pub fn setup_new_tiles(
-    mut query: Query<(&mut Transform, &mut Handle<Mesh>, &mut Handle<TileHighlightMaterial>, &Tile, &Coordinates), Added<Tile>>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Transform, &mut Handle<Mesh>, &mut Handle<TileHighlightMaterial>, &Tile, &Coordinates), Added<Tile>>,
     grid_assets: Res<GridAssets>,
 ) {
-    for (mut transform, mut mesh, mut material, tile, coordinates) in query.iter_mut() {
+    for (id, mut transform, mut mesh, mut material, tile, coordinates) in query.iter_mut() {
         *mesh = grid_assets.square_mesh.clone();
 
         let height = match tile.kind {
@@ -142,10 +152,15 @@ pub fn setup_new_tiles(
             TileKind::HighGround => 0.5,
         };
 
-        // FIXME: debug tiles
+        // default material
         *material = grid_assets.hostile_indicator.clone();
 
         *transform = Transform::from_xyz(-(coordinates.x as f32), height, coordinates.y as f32);
+        
+        // add event callbacks
+        commands
+            .entity(id)
+            .insert(On::<Pointer<Click>>::send_event::<TileFocusEvent>());
     }
 }
 
