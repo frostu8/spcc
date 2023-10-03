@@ -27,7 +27,31 @@ fn main() {
         ))
         .add_state::<AppState>()
         .add_systems(Startup, setup)
+        .add_systems(Update, setup_tile_map)
         .run();
+}
+
+use spcc::tile_map::{Coordinates, Grid};
+
+pub fn setup_tile_map(
+    mut debounce: Local<bool>,
+    mut commands: Commands,
+    query: Query<Entity, With<Grid>>,
+) {
+    if *debounce {
+        return;
+    }
+
+    let Ok(grid) = query.get_single() else {
+        return;
+    };
+
+    *debounce = true;
+
+    commands
+        .spawn((
+            SpatialBundle::default()
+        ));
 }
 
 pub fn setup(

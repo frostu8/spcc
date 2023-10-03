@@ -24,7 +24,15 @@ impl Plugin for GridPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<GridAssets>()
-            .add_systems(PostUpdate, setup_new_tiles.before(TransformSystem::TransformPropagate))
+            .add_systems(
+                PostUpdate,
+                (
+                    setup_new_tiles,
+                    position_gridlocked_entities
+                        .before(TransformSystem::TransformPropagate)
+                        .after(setup_new_tiles)
+                )
+            )
             .add_systems(Startup, load_grid_assets);
             //.add_systems(OnEnter(AppState::StageLoading), load_grid_assets);
     }
@@ -58,6 +66,13 @@ pub struct GridBundle {
 #[derive(Clone, Component, Debug, Default)]
 pub struct Grid {
     lookup: HashMap<Coordinates, Entity>,
+}
+
+impl Grid {
+    /// Gets a tile from the lookup table.
+    pub fn get_tile(&self, idx: &Coordinates) -> Option<&Entity> {
+        self.lookup.get(idx)
+    }
 }
 
 /// The coordinates to a tile entity.
@@ -131,24 +146,35 @@ pub struct TileBundle {
     pub tile: Tile,
 }
 
+pub fn position_gridlocked_entities(
+    mut query: Query<(&Parent, &mut Transform, &Coordinates), Changed<Coordinates>>,
+    grid_query: Query<&Grid>,
+    tile_query: Query<&Tile>,
+) {
+    for (parent, mut transform, coordinates) in query.iter_mut() {
+        let grid = grid_query.get(parent.get()).unwrap();
+
+        let height = match grid.get_tile(coordinates).and_then(|e| tile_query.get(*e).ok()) {
+            Some(Tile { kind: TileKind::Ground, .. }) => 0.0,
+            Some(Tile { kind: TileKind::HighGround, .. }) => 0.5,
+            None => 0.0,
+        };
+
+        *transform = Transform::from_xyz(-(coordinates.x as f32), height, coordinates.y as f32);
+    }
+}
+
 pub fn setup_new_tiles(
-    mut query: Query<(Entity, &mut Transform, &mut Handle<Mesh>, &Tile, &Coordinates), Added<Tile>>,
+    mut query: Query<(Entity, &mut Handle<Mesh>, &mut Handle<TileHighlightMaterial>, &Coordinates), Added<Tile>>,
     parents_query: Query<&Parent>,
     mut grid_query: Query<&mut Grid>,
     grid_assets: Res<GridAssets>,
 ) {
-    for (entity, mut transform, mut mesh, tile, coordinates) in query.iter_mut() {
+    for (entity, mut mesh, mut _material, coordinates) in query.iter_mut() {
         *mesh = grid_assets.square_mesh.clone();
-
-        let height = match tile.kind {
-            TileKind::Ground => 0.0,
-            TileKind::HighGround => 0.5,
-        };
 
         // default material
         //*material = grid_assets.hostile_indicator.clone();
-
-        *transform = Transform::from_xyz(-(coordinates.x as f32), height, coordinates.y as f32);
 
         for parent in parents_query.iter_ancestors(entity) {
             if let Ok(mut grid) = grid_query.get_mut(parent) {
