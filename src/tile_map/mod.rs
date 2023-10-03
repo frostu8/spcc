@@ -1,9 +1,13 @@
 //! The tile map that determines grid-locked interactions, such as operators.
 
+pub mod focus;
+pub mod range;
+
 use bevy::prelude::*;
 use bevy::transform::TransformSystem;
 
-use bevy_mod_picking::prelude::*;
+use std::collections::HashMap;
+use std::ops::Add;
 
 use serde::{Deserialize, Serialize};
 
@@ -20,8 +24,6 @@ impl Plugin for GridPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<GridAssets>()
-            .add_event::<TileFocusEvent>()
-            .add_systems(Update, color_selected_tiles) // TODO: debug
             .add_systems(PostUpdate, setup_new_tiles.before(TransformSystem::TransformPropagate))
             .add_systems(Startup, load_grid_assets);
             //.add_systems(OnEnter(AppState::StageLoading), load_grid_assets);
@@ -54,13 +56,26 @@ pub struct GridBundle {
 
 /// The grid component.
 #[derive(Clone, Component, Debug, Default)]
-pub struct Grid;
+pub struct Grid {
+    lookup: HashMap<Coordinates, Entity>,
+}
 
 /// The coordinates to a tile entity.
-#[derive(Clone, Component, Debug, Default, Deserialize, Reflect, Serialize)]
+#[derive(Clone, Copy, Component, Debug, Default, Deserialize, PartialEq, Eq, Hash, Reflect, Serialize)]
 pub struct Coordinates {
-    pub x: u32,
-    pub y: u32,
+    pub x: i32,
+    pub y: i32,
+}
+
+impl Add for Coordinates {
+    type Output = Coordinates;
+
+    fn add(self, other: Coordinates) -> Coordinates {
+        Coordinates {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
 }
 
 /// The tile.
@@ -114,37 +129,15 @@ pub struct TileBundle {
     pub material: Handle<TileHighlightMaterial>,
     pub coordinates: Coordinates,
     pub tile: Tile,
-    pub raycast_pick_target: RaycastPickTarget,
-}
-
-/// An event for when the player taps/clicks on a tile.
-#[derive(Debug, Event)]
-pub struct TileFocusEvent(pub Entity);
-
-impl From<ListenerInput<Pointer<Click>>> for TileFocusEvent {
-    fn from(e: ListenerInput<Pointer<Click>>) -> TileFocusEvent {
-        TileFocusEvent(e.target())
-    }
-}
-
-pub fn color_selected_tiles(
-    mut query: Query<&mut Handle<TileHighlightMaterial>>,
-    grid_assets: Res<GridAssets>,
-    mut events: EventReader<TileFocusEvent>,
-) {
-    for event in events.iter() {
-        if let Ok(mut material) = query.get_mut(event.0) {
-            *material = grid_assets.support_indicator.clone();
-        }
-    }
 }
 
 pub fn setup_new_tiles(
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut Transform, &mut Handle<Mesh>, &mut Handle<TileHighlightMaterial>, &Tile, &Coordinates), Added<Tile>>,
+    mut query: Query<(Entity, &mut Transform, &mut Handle<Mesh>, &Tile, &Coordinates), Added<Tile>>,
+    parents_query: Query<&Parent>,
+    mut grid_query: Query<&mut Grid>,
     grid_assets: Res<GridAssets>,
 ) {
-    for (id, mut transform, mut mesh, mut material, tile, coordinates) in query.iter_mut() {
+    for (entity, mut transform, mut mesh, tile, coordinates) in query.iter_mut() {
         *mesh = grid_assets.square_mesh.clone();
 
         let height = match tile.kind {
@@ -153,14 +146,16 @@ pub fn setup_new_tiles(
         };
 
         // default material
-        *material = grid_assets.hostile_indicator.clone();
+        //*material = grid_assets.hostile_indicator.clone();
 
         *transform = Transform::from_xyz(-(coordinates.x as f32), height, coordinates.y as f32);
-        
-        // add event callbacks
-        commands
-            .entity(id)
-            .insert(On::<Pointer<Click>>::send_event::<TileFocusEvent>());
+
+        for parent in parents_query.iter_ancestors(entity) {
+            if let Ok(mut grid) = grid_query.get_mut(parent) {
+                // add tile to cache
+                grid.lookup.insert(coordinates.clone(), entity);
+            }
+        }
     }
 }
 

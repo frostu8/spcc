@@ -23,6 +23,7 @@ fn main() {
             spcc::stats::StatPlugin,
             spcc::tile_map::GridPlugin,
             spcc::material::MaterialPlugin,
+            spcc::tile_map::focus::FocusPlugin,
         ))
         .add_state::<AppState>()
         .add_systems(Startup, setup)
