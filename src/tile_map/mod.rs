@@ -1,6 +1,7 @@
 //! The tile map that determines grid-locked interactions, such as operators.
 
 pub mod focus;
+pub mod nav;
 pub mod range;
 
 use bevy::prelude::*;
@@ -28,9 +29,10 @@ impl Plugin for GridPlugin {
                 PostUpdate,
                 (
                     setup_new_tiles,
+                    cache_tiles,
                     position_gridlocked_entities
                         .before(TransformSystem::TransformPropagate)
-                        .after(setup_new_tiles)
+                        .after(cache_tiles)
                 )
             )
             .add_systems(Startup, load_grid_assets);
@@ -62,15 +64,24 @@ pub struct GridBundle {
     pub grid: Grid,
 }
 
+// TODO: maybe have only the grid manage tile information?
+
 /// The grid component.
 #[derive(Clone, Component, Debug, Default)]
 pub struct Grid {
-    lookup: HashMap<Coordinates, Entity>,
+    lookup: HashMap<Coordinates, CachedTile>,
+}
+
+/// Grid-cached tile.
+#[derive(Clone, Debug)]
+pub struct CachedTile {
+    entity: Entity,
+    tile: Tile,
 }
 
 impl Grid {
-    /// Gets a tile from the lookup table.
-    pub fn get_tile(&self, idx: &Coordinates) -> Option<&Entity> {
+    /// Gets a tile from the cache.
+    pub fn get(&self, idx: &Coordinates) -> Option<&CachedTile> {
         self.lookup.get(idx)
     }
 }
@@ -80,6 +91,24 @@ impl Grid {
 pub struct Coordinates {
     pub x: i32,
     pub y: i32,
+}
+
+impl Coordinates {
+    /// Returns where the tile placed at this coordinate should be positioned.
+    ///
+    /// Height is not a factor that is taken into account, so that is up to the
+    /// client.
+    pub fn local(&self, height: f32) -> Vec3 {
+        Vec3::new(-(self.x as f32), height, self.y as f32)
+    }
+
+    /// Approximates the tile coordinates of the local position.
+    pub fn from_local(local: Vec3) -> Coordinates {
+        Coordinates {
+            x: -(local.x.floor() as i32),
+            y: local.y.floor() as i32,
+        }
+    }
 }
 
 impl Add for Coordinates {
@@ -154,34 +183,45 @@ pub fn position_gridlocked_entities(
     for (parent, mut transform, coordinates) in query.iter_mut() {
         let grid = grid_query.get(parent.get()).unwrap();
 
-        let height = match grid.get_tile(coordinates).and_then(|e| tile_query.get(*e).ok()) {
-            Some(Tile { kind: TileKind::Ground, .. }) => 0.0,
-            Some(Tile { kind: TileKind::HighGround, .. }) => 0.5,
+        let height = match grid.get(coordinates).map(|t| t.tile.kind) {
+            Some(TileKind::Ground) => 0.0,
+            Some(TileKind::HighGround) => 0.5,
             None => 0.0,
         };
 
-        *transform = Transform::from_xyz(-(coordinates.x as f32), height, coordinates.y as f32);
+        *transform = Transform::from_translation(coordinates.local(height));
+    }
+}
+
+pub fn cache_tiles(
+    query: Query<(Entity, &Coordinates, &Tile), Changed<Tile>>,
+    parents_query: Query<&Parent>,
+    mut grid_query: Query<&mut Grid>,
+) {
+    for (entity, coordinates, tile) in query.iter() {
+        for parent in parents_query.iter_ancestors(entity) {
+            if let Ok(mut grid) = grid_query.get_mut(parent) {
+                grid.lookup.insert(
+                    *coordinates,
+                    CachedTile {
+                        entity,
+                        tile: tile.clone(),
+                    },
+                );
+            }
+        }
     }
 }
 
 pub fn setup_new_tiles(
-    mut query: Query<(Entity, &mut Handle<Mesh>, &mut Handle<TileHighlightMaterial>, &Coordinates), Added<Tile>>,
-    parents_query: Query<&Parent>,
-    mut grid_query: Query<&mut Grid>,
+    mut query: Query<(Entity, &mut Handle<Mesh>, &mut Handle<TileHighlightMaterial>), Added<Tile>>,
     grid_assets: Res<GridAssets>,
 ) {
-    for (entity, mut mesh, mut _material, coordinates) in query.iter_mut() {
+    for (_entity, mut mesh, mut _material) in query.iter_mut() {
         *mesh = grid_assets.square_mesh.clone();
 
         // default material
         //*material = grid_assets.hostile_indicator.clone();
-
-        for parent in parents_query.iter_ancestors(entity) {
-            if let Ok(mut grid) = grid_query.get_mut(parent) {
-                // add tile to cache
-                grid.lookup.insert(coordinates.clone(), entity);
-            }
-        }
     }
 }
 

@@ -62,7 +62,7 @@ pub fn highlight_range_focus(
                     continue;
                 };
 
-                if let Ok(mut material) = tile_query.get_mut(*tile) {
+                if let Ok(mut material) = tile_query.get_mut(tile.entity) {
                     // TODO: colors
                     *material = grid_assets.hostile_indicator.clone();
                 }
