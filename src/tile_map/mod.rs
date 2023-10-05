@@ -18,6 +18,9 @@ use crate::material::TileHighlightMaterial;
 
 //use crate::AppState;
 
+/// The height for high ground tiles.
+pub const HIGH_GROUND_HEIGHT: f32 = 0.25;
+
 /// The plugin for grid operations.
 pub struct GridPlugin;
 
@@ -185,7 +188,7 @@ pub fn position_gridlocked_entities(
 
         let height = match grid.get(coordinates).map(|t| t.tile.kind) {
             Some(TileKind::Ground) => 0.0,
-            Some(TileKind::HighGround) => 0.5,
+            Some(TileKind::HighGround) => HIGH_GROUND_HEIGHT,
             None => 0.0,
         };
 
@@ -221,7 +224,7 @@ pub fn setup_new_tiles(
         *mesh = grid_assets.square_mesh.clone();
 
         // default material
-        //*material = grid_assets.hostile_indicator.clone();
+        *_material = grid_assets.hostile_indicator.clone();
     }
 }
 
