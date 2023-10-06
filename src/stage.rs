@@ -17,7 +17,7 @@ use iyes_progress::prelude::*;
 use bevy_common_assets::ron::RonAssetPlugin;
 
 use crate::AppState;
-use crate::tile_map::{self, GridBundle, TileBundle, Coordinates, TileKind};
+use crate::tile_map::{self, GridBundle, TileBundle, TileKind};
 
 /// A map.
 ///
@@ -64,7 +64,7 @@ pub struct TileMap {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Tile {
     /// Position of a tile.
-    pub pos: Coordinates,
+    pub pos: IVec2,
     /// The type of tile.
     #[serde(default)]
     pub kind: TileKind,
@@ -212,7 +212,7 @@ fn load_map(
             for tile in map.tile_map.tiles.iter() {
                 parent
                     .spawn(TileBundle {
-                        coordinates: tile.pos.clone(),
+                        coordinates: tile.pos.clone().into(),
                         tile: tile_map::Tile::new(tile.kind, tile.deployable),
                         ..default()
                     });

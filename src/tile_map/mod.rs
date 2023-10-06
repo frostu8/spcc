@@ -1,14 +1,14 @@
 //! The tile map that determines grid-locked interactions, such as operators.
 
-pub mod focus;
+//pub mod focus;
 pub mod nav;
-pub mod range;
+//pub mod range;
 
 use bevy::prelude::*;
 use bevy::transform::TransformSystem;
 
 use std::collections::HashMap;
-use std::ops::Add;
+use std::ops::{Deref, DerefMut, Add};
 
 use serde::{Deserialize, Serialize};
 
@@ -78,8 +78,8 @@ pub struct Grid {
 /// Grid-cached tile.
 #[derive(Clone, Debug)]
 pub struct CachedTile {
-    entity: Entity,
-    tile: Tile,
+    pub entity: Entity,
+    pub tile: Tile,
 }
 
 impl Grid {
@@ -90,11 +90,8 @@ impl Grid {
 }
 
 /// The coordinates to a tile entity.
-#[derive(Clone, Copy, Component, Debug, Default, Deserialize, PartialEq, Eq, Hash, Reflect, Serialize)]
-pub struct Coordinates {
-    pub x: i32,
-    pub y: i32,
-}
+#[derive(Clone, Copy, Component, Debug, Default, PartialEq, Eq, Hash, Reflect)]
+pub struct Coordinates(IVec2);
 
 impl Coordinates {
     /// Returns where the tile placed at this coordinate should be positioned.
@@ -107,10 +104,30 @@ impl Coordinates {
 
     /// Approximates the tile coordinates of the local position.
     pub fn from_local(local: Vec3) -> Coordinates {
-        Coordinates {
+        Coordinates(IVec2 {
             x: -(local.x.floor() as i32),
             y: local.y.floor() as i32,
-        }
+        })
+    }
+}
+
+impl From<IVec2> for Coordinates {
+    fn from(i: IVec2) -> Coordinates {
+        Coordinates(i)
+    }
+}
+
+impl Deref for Coordinates {
+    type Target = IVec2;
+
+    fn deref(&self) -> &IVec2 {
+        &self.0
+    }
+}
+
+impl DerefMut for Coordinates {
+    fn deref_mut(&mut self) -> &mut IVec2 {
+        &mut self.0
     }
 }
 
@@ -118,10 +135,7 @@ impl Add for Coordinates {
     type Output = Coordinates;
 
     fn add(self, other: Coordinates) -> Coordinates {
-        Coordinates {
-            x: self.x + other.x,
-            y: self.y + other.y,
-        }
+        Coordinates(self.0 + other.0)
     }
 }
 
@@ -181,7 +195,6 @@ pub struct TileBundle {
 pub fn position_gridlocked_entities(
     mut query: Query<(&Parent, &mut Transform, &Coordinates), Changed<Coordinates>>,
     grid_query: Query<&Grid>,
-    tile_query: Query<&Tile>,
 ) {
     for (parent, mut transform, coordinates) in query.iter_mut() {
         let grid = grid_query.get(parent.get()).unwrap();

@@ -89,7 +89,10 @@ impl<'a> Pathfinder<'a> {
 
     /// Preforms a line-of-sight (LOS) check between two arbitrary local
     /// positions.
-    pub fn los_check(&self, start: Vec3, end: Vec3) -> bool {
+    ///
+    /// Returns the tile that made this test fail, or `None` if the test was
+    /// successful.
+    pub fn los_check(&self, start: Vec3, end: Vec3) -> Option<Coordinates> {
         // http://playtechs.blogspot.com/2007/03/raytracing-on-grid.html?m=1
         todo!()
     }
