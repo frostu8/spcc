@@ -14,6 +14,7 @@ pub struct NavPlugin;
 impl Plugin for NavPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_event::<NavigationFinishEvent>()
             .add_systems(
                 Update, 
                 (
@@ -64,6 +65,10 @@ pub struct CalculatedPath {
 }
 
 impl CalculatedPath {
+    fn is_finished(&self) -> bool {
+        self.waypoints.is_empty()
+    }
+
     fn next_waypoint(&self) -> Option<Vec3> {
         self.waypoints.front().copied()
     }
@@ -168,6 +173,10 @@ impl<'a> Pathfinder<'a> {
     }
 }
 
+/// An event that fires when an entity has finished its pathing.
+#[derive(Debug, Clone, Event)]
+pub struct NavigationFinishEvent(pub Entity);
+
 /// No valid path was found.
 #[derive(Debug)]
 pub struct NoPathError;
@@ -246,10 +255,11 @@ pub fn compute_navigation(
 }
 
 pub fn navigation_steering(
-    mut query: Query<(&mut Transform, &mut CalculatedPath, &ComputedStat<stat::MoveSpeed>)>,
+    mut query: Query<(Entity, &mut Transform, &mut CalculatedPath, &ComputedStat<stat::MoveSpeed>)>,
+    mut finish_tx: EventWriter<NavigationFinishEvent>,
     time: Res<Time>,
 ) {
-    for (mut transform, mut path, move_speed) in query.iter_mut() {
+    for (id, mut transform, mut path, move_speed) in query.iter_mut() {
         let Some(next) = path.next_waypoint() else {
             // we are at the end
             continue;
@@ -266,7 +276,11 @@ pub fn navigation_steering(
             // snap to waypoint and pop
             transform.translation = next;
             path.pop_waypoint();
-            info!("popped waypoint: {}", next);
+
+            // send a finish event if this was the last waypoint
+            if path.is_finished() {
+                finish_tx.send(NavigationFinishEvent(id));
+            }
         } else {
             // advance towards waypoint
             transform.translation += direction * move_delta;

@@ -2,13 +2,22 @@
 
 use bevy::prelude::*;
 
+use crate::tile_map::nav::{Nav, NavigationFinishEvent};
+
 /// Pathing plugin.
 pub struct PathPlugin;
 
 impl Plugin for PathPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_event::<CheckpointPassedEvent>();
+            .add_event::<CheckpointPassedEvent>()
+            .add_systems(
+                Update,
+                (
+                    start_followers,
+                    update_followers_navigation,
+                ),
+            );
             //.add_systems(Update, follow_path)
             //.add_systems(PostUpdate, start_followers.before(TransformSystem::TransformPropagate));
     }
@@ -56,7 +65,7 @@ impl Follower {
 
     /// Checks if the follower's pathing is complete.
     pub fn is_finished(&self) -> bool {
-        self.target().is_none()
+        self.next().is_none()
     }
 
     /// Fetches a specific checkpoint.
@@ -66,20 +75,17 @@ impl Follower {
 
     /// Peeks the current checkpoint. Returns `None` if there are no
     /// checkpoints left.
-    pub fn target(&self) -> Option<&Checkpoint> {
+    pub fn next(&self) -> Option<&Checkpoint> {
         self.checkpoints.get(self.current_idx)
     }
 
-    /// Advances to the next checkpoint, returning the current checkpoint
-    /// before advancing.
+    /// Advances to the next checkpoint, returning the next checkpoint.
     ///
     /// Mostly used internally, but this can be manually called to skip
     /// checkpoints.
     pub fn advance(&mut self) -> Option<&Checkpoint> {
-        let res = self.checkpoints.get(self.current_idx);
         self.current_idx += 1;
-
-        res
+        self.next()
     }
 }
 
@@ -87,7 +93,7 @@ impl Follower {
 #[derive(Clone, Debug)]
 pub struct Checkpoint {
     /// The position to reach.
-    pub endpoint: Vec2,
+    pub pos: Vec2,
     /*
     /// How long the [`Follower`] will wait in seconds until moving to the next
     /// checkpoint.
@@ -97,27 +103,40 @@ pub struct Checkpoint {
 
 impl Checkpoint {
     /// Shorthand for initializing a zero-wait checkpoint.
-    pub fn at(endpoint: Vec2) -> Checkpoint {
+    pub fn at(pos: Vec2) -> Checkpoint {
         Checkpoint {
-            endpoint,
+            pos,
         }
     }
 }
 
-/*
 /// System that starts newly spawned [`Follower`]s.
 fn start_followers(
-    mut query: Query<(Entity, &mut Transform, &mut Follower), Added<Follower>>,
-    mut check_passed_tx: EventWriter<CheckpointPassedEvent>,
+    mut query: Query<(&Follower, &mut Nav), Added<Follower>>,
+    //mut check_passed_tx: EventWriter<CheckpointPassedEvent>,
 ) {
-    for (id, mut transform, mut follower) in query.iter_mut() {
-        // pop first checkpoint
-        if let Some(first) = follower.advance() {
-            *transform = Transform::from_xyz(world_position.x, 0.0, world_position.y);
+    for (follower, mut nav) in query.iter_mut() {
+        // set next checkpoint
+        if let Some(next) = follower.next() {
+            let target = Vec3::new(next.pos.x, 0.0, next.pos.y);
+            nav.set_target(target);
+        }
+    }
+    
+}
 
-            check_passed_tx.send(CheckpointPassedEvent(id));
+fn update_followers_navigation(
+    mut query: Query<(&mut Follower, &mut Nav)>,
+    mut nav_finished_events: EventReader<NavigationFinishEvent>,
+) {
+    for ev in nav_finished_events.iter() {
+        if let Ok((mut follower, mut nav)) = query.get_mut(ev.0) {
+            // set next checkpoint
+            if let Some(next) = follower.advance() {
+                let target = Vec3::new(next.pos.x, 0.0, next.pos.y);
+                nav.set_target(target);
+            }
         }
     }
 }
-*/
 

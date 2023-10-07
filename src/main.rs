@@ -84,16 +84,18 @@ pub fn setup(
             EnemyBundle {
                 transform: Transform::from_xyz(6.0, 0.0, 0.0),
                 follower: Follower::new([
-                    Checkpoint::at(Vec2::ZERO), Checkpoint::at(Vec2::Y * 2.0),
-                    Checkpoint::at(Vec2::ONE * 2.0), Checkpoint::at(Vec2::X * 2.0),
-                    Checkpoint::at(Vec2::ZERO),
+                    Checkpoint::at(Vec2::new(-6.0, 0.0)),
+                    Checkpoint::at(Vec2::new(6.0, 3.0)),
+                    Checkpoint::at(Vec2::new(-6.0, 3.0)),
+                    Checkpoint::at(Vec2::new(-5.0, -3.0)),
+                    Checkpoint::at(Vec2::new(6.0, 0.0)),
+                    Checkpoint::at(Vec2::new(0.0, 3.0)),
+                    Checkpoint::at(Vec2::new(0.0, 0.0)),
+                    Checkpoint::at(Vec2::new(6.0, 3.0)),
                 ]),
                 ..default()
             },
-            NavBundle {
-                nav: Nav::new(Vec3::new(-5.0, 0.0, -3.0)),
-                ..default()
-            }
+            NavBundle::default(),
         ))
         .with_children(|parent| {
             parent
