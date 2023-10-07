@@ -3,7 +3,9 @@
 use super::*;
 
 use std::cmp::Ordering;
-use std::collections::{HashMap, BinaryHeap};
+use std::collections::{HashMap, BinaryHeap, VecDeque};
+
+use crate::stats::{stat, ComputedStat};
 
 use bevy::prelude::*;
 
@@ -17,6 +19,8 @@ impl Plugin for NavPlugin {
                 (
                     compute_navigation,
                     debug_show_navigation,
+                    navigation_steering
+                        .after(compute_navigation),
                 )
             );
     }
@@ -27,6 +31,7 @@ impl Plugin for NavPlugin {
 pub struct Nav {
     target: Vec3,
     path: Vec<Coordinates>,
+    waypoints: VecDeque<Vec3>,
 }
 
 impl Nav {
@@ -35,6 +40,8 @@ impl Nav {
         Nav {
             target,
             path: Vec::default(),
+
+            waypoints: VecDeque::new(),
         }
     }
 
@@ -46,6 +53,14 @@ impl Nav {
     /// Sets the target of the nav.
     pub fn set_target(&mut self, target: Vec3) {
         self.target = target;
+    }
+
+    fn next_waypoint(&self) -> Option<Vec3> {
+        self.waypoints.front().copied()
+    }
+
+    fn pop_waypoint(&mut self) {
+        self.waypoints.pop_front();
     }
 }
 
@@ -205,6 +220,46 @@ pub fn compute_navigation(
         // pathfind
         if let Ok(path) = pathfinder.find_path(start, target) {
             nav.path = path;
+        }
+
+        // TODO: string pulling
+        let waypoints = nav
+            .path
+            .iter()
+            .map(|c| c.local(0.0))
+            .map(|v| grid_transform.transform_point(v))
+            .chain(std::iter::once(nav.target))
+            .collect::<VecDeque<_>>();
+
+        nav.waypoints = waypoints;
+    }
+}
+
+pub fn navigation_steering(
+    mut query: Query<(&mut Transform, &mut Nav, &ComputedStat<stat::MoveSpeed>)>,
+    time: Res<Time>,
+) {
+    for (mut transform, mut nav, move_speed) in query.iter_mut() {
+        let Some(next) = nav.next_waypoint() else {
+            // we are at the end
+            continue;
+        };
+
+        // find movement delta for this frame
+        let move_delta = time.delta_seconds() * move_speed.get();
+
+        // move to next waypoint
+        let distance = next.distance(transform.translation);
+        let direction = (next - transform.translation).normalize();
+
+        if distance <= move_delta {
+            // snap to waypoint and pop
+            transform.translation = next;
+            nav.pop_waypoint();
+            info!("popped waypoint: {}", next);
+        } else {
+            // advance towards waypoint
+            transform.translation += direction * move_delta;
         }
     }
 }
