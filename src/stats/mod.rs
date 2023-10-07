@@ -82,7 +82,7 @@ impl<T> Deref for ComputedStat<T> {
 }
 
 /// The base trait for all supported stats.
-pub trait Stat: Component + Clone {
+pub trait Stat: Component + Clone + PartialEq {
     type Modifier: Modifier;
 
     /// Determines the logic of applying modifiers to stats.
@@ -225,8 +225,12 @@ pub fn propagate_stat<T: Stat>(
         }
 
         // finalize stat
-        final_stat.0 = base_stat.clone();
-        final_stat.0.apply(&final_mod);
+        let mut result_stat = base_stat.clone();
+        result_stat.apply(&final_mod);
+
+        if result_stat != final_stat.0 {
+            final_stat.0 = result_stat;
+        }
     }
 }
 

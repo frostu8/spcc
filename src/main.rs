@@ -4,8 +4,9 @@ use spcc::AppState;
 
 use spcc::stage::{StageLoader, StageBuilder};
 use spcc::enemy::{Checkpoint, Follower, EnemyBundle};
-use spcc::tile_map::nav::{NavBundle, Nav};
+use spcc::tile_map::nav::NavBundle;
 use spcc::stats::{Stat as _, stat};
+use spcc::effect::HpDecay;
 
 #[cfg(feature = "debug")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -25,6 +26,8 @@ fn main() {
             spcc::tile_map::GridPlugin,
             spcc::tile_map::nav::NavPlugin,
             spcc::material::MaterialPlugin,
+            spcc::effect::StatusEffectPlugin,
+            spcc::ui::CoreUiPlugin,
             //spcc::tile_map::focus::FocusPlugin,
         ))
         .add_state::<AppState>()
@@ -114,8 +117,16 @@ pub fn setup(
                 });
 
             parent
-                .spawn(SpatialBundle::default())
-                .insert(stat::MoveSpeed::modif().add(0.5));
+                .spawn((
+                    SpatialBundle::default(),
+                    stat::MoveSpeed::modif().add(0.5),
+                ));
+
+            parent
+                .spawn((
+                    SpatialBundle::default(),
+                    HpDecay(60.0),
+                ));
         });
 
     // begin stage loading

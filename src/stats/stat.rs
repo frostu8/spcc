@@ -99,17 +99,17 @@ macro_rules! impl_stat_f32 {
 }
 
 /// The maximum HP of an entity.
-#[derive(Clone, Component, Debug)]
-pub struct MaxHp(i32);
+#[derive(Clone, Component, Debug, PartialEq)]
+pub struct MaxHp(f32);
 
 impl Default for MaxHp {
     fn default() -> MaxHp {
-        MaxHp(1500)
+        MaxHp(1500.0)
     }
 }
 
 /// The ATK of an entity. Auto-attacks deal 100% ATK as damage.
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, PartialEq)]
 pub struct Atk(i32);
 
 impl Default for Atk {
@@ -119,7 +119,7 @@ impl Default for Atk {
 }
 
 /// The DEF of an entity. Reduces Physical damage taken by a flat amount.
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, PartialEq)]
 pub struct Def(i32);
 
 impl Default for Def {
@@ -131,7 +131,7 @@ impl Default for Def {
 /// The RES of an entity. Reduces Arts damage taken by a percentage.
 ///
 /// A percentage between 0 and 100. Only whole numbers (for simplicity).
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, PartialEq)]
 pub struct Res(i32);
 
 impl Default for Res {
@@ -144,7 +144,7 @@ impl Default for Res {
 ///
 /// Determines the base speed at which an operator or enemy can schwing in
 /// seconds.
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, PartialEq)]
 pub struct AtkInterval(f32);
 
 impl Default for AtkInterval {
@@ -156,7 +156,7 @@ impl Default for AtkInterval {
 /// Attack speed, an additional modifier to [`AtkInterval`].
 ///
 /// Every 100 ASPD is 1.0x attack speed.
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, PartialEq)]
 pub struct Aspd(i32);
 
 impl Default for Aspd {
@@ -166,7 +166,7 @@ impl Default for Aspd {
 }
 
 /// **Enemy only** Movement speed in tiles/second.
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, PartialEq)]
 pub struct MoveSpeed(f32);
 
 impl Default for MoveSpeed {
@@ -178,7 +178,7 @@ impl Default for MoveSpeed {
 /// **Operator only** Redeployment time in seconds.
 ///
 /// Determines how fast an operator can be redeployed after retreating.
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, PartialEq)]
 pub struct RedeployTime(f32);
 
 impl Default for RedeployTime {
@@ -188,7 +188,7 @@ impl Default for RedeployTime {
 }
 
 /// **Operator only** DP cost much DP must be spent to deploy an operator.
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, PartialEq)]
 pub struct DpCost(i32);
 
 impl Default for DpCost {
@@ -199,7 +199,7 @@ impl Default for DpCost {
 
 /// **Operator only** Block count determines how many enemies an opeator can
 /// block.
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, PartialEq)]
 pub struct Block(i32);
 
 impl Default for Block {
@@ -208,7 +208,10 @@ impl Default for Block {
     }
 }
 
-impl_stat_i32!(MaxHp, min: 0);
+// maxhp must be at least one, to make division math easier in other structs,
+// since hp is typically represented as percentage of max
+impl_stat_f32!(MaxHp, min: 1.0);
+
 impl_stat_i32!(Atk, min: 0);
 impl_stat_i32!(Def, min: 0);
 impl_stat_i32!(Res, min: 0, max: 100);

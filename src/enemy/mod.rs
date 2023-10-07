@@ -4,6 +4,9 @@ pub mod path;
 
 pub use path::{Checkpoint, Follower};
 
+use crate::stats::EnemyStatBundle;
+use crate::damage::Health;
+
 use bevy::prelude::*;
 
 /// Enemy plugin.
@@ -29,11 +32,8 @@ pub struct EnemyBundle {
     pub global_transform: GlobalTransform,
     pub visibility: Visibility,
     pub computed_visibility: ComputedVisibility,
-    pub stats: crate::stats::EnemyStatBundle,
+    pub stats: EnemyStatBundle,
+    pub health: Health,
     pub follower: Follower,
 }
 
-// TODO: tile to world impl, this is just rough
-fn tile_to_xz(tile: (u16, u16)) -> Vec2 {
-    Vec2::new(tile.0 as f32, tile.1 as f32)
-}
