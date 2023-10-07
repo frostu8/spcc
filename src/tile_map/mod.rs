@@ -82,6 +82,14 @@ pub struct CachedTile {
     pub tile: Tile,
 }
 
+impl Deref for CachedTile {
+    type Target = Tile;
+    
+    fn deref(&self) -> &Tile {
+        &self.tile
+    }
+}
+
 impl Grid {
     /// Gets a tile from the cache.
     pub fn get(&self, idx: &Coordinates) -> Option<&CachedTile> {
@@ -99,14 +107,14 @@ impl Coordinates {
     /// Height is not a factor that is taken into account, so that is up to the
     /// client.
     pub fn local(&self, height: f32) -> Vec3 {
-        Vec3::new(-(self.x as f32), height, self.y as f32)
+        Vec3::new(self.x as f32, height, self.y as f32)
     }
 
     /// Approximates the tile coordinates of the local position.
     pub fn from_local(local: Vec3) -> Coordinates {
         Coordinates(IVec2 {
-            x: -(local.x.floor() as i32),
-            y: local.y.floor() as i32,
+            x: local.x.floor() as i32,
+            y: local.z.floor() as i32,
         })
     }
 }
@@ -114,6 +122,12 @@ impl Coordinates {
 impl From<IVec2> for Coordinates {
     fn from(i: IVec2) -> Coordinates {
         Coordinates(i)
+    }
+}
+
+impl From<Coordinates> for IVec2 {
+    fn from(i: Coordinates) -> IVec2 {
+        i.0
     }
 }
 
@@ -160,6 +174,14 @@ impl Tile {
         self.kind
     }
 
+    /// Whether the tile is solid.
+    ///
+    /// This checks if [`Tile::kind`] returns [`TileKind::Ground`] and returns
+    /// `true` if it does.
+    pub fn is_solid(&self) -> bool {
+        self.kind == TileKind::HighGround
+    }
+
     /// Whether the tile is deployable or not.
     pub fn deployable(&self) -> bool {
         self.deployable
@@ -170,7 +192,7 @@ impl Tile {
 ///
 /// Determines what kind of operators can be deployed, and whether enemies can
 /// cross.
-#[derive(Clone, Copy, Component, Debug, Default, Deserialize, Reflect, Serialize)]
+#[derive(Clone, Copy, Component, Debug, Default, Deserialize, PartialEq, Eq, Reflect, Serialize)]
 pub enum TileKind {
     Ground,
     #[default]

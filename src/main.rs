@@ -4,33 +4,36 @@ use spcc::AppState;
 
 use spcc::stage::{StageLoader, StageBuilder};
 use spcc::enemy::{Checkpoint, Follower, EnemyBundle};
+use spcc::tile_map::nav::Nav;
 use spcc::stats::{Stat as _, stat};
 
 #[cfg(feature = "debug")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
-use bevy_mod_picking::prelude::*;
+//use bevy_mod_picking::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins,
-            DefaultPickingPlugins,
+            //DefaultPickingPlugins,
             #[cfg(feature = "debug")]
             WorldInspectorPlugin::new(),
             spcc::stage::StagePlugin,
             spcc::enemy::path::PathPlugin,
             spcc::stats::StatPlugin,
             spcc::tile_map::GridPlugin,
+            spcc::tile_map::nav::NavPlugin,
             spcc::material::MaterialPlugin,
             //spcc::tile_map::focus::FocusPlugin,
         ))
         .add_state::<AppState>()
         .add_systems(Startup, setup)
-        .add_systems(Update, setup_tile_map)
+        //.add_systems(Update, setup_tile_map)
         .run();
 }
 
+/*
 use spcc::tile_map::{Coordinates, Grid};
 
 pub fn setup_tile_map(
@@ -53,42 +56,55 @@ pub fn setup_tile_map(
             SpatialBundle::default()
         ));
 }
+*/
 
 pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut stage_loader: ResMut<StageLoader>,
-    mut app_state: ResMut<NextState<AppState>>
+    mut app_state: ResMut<NextState<AppState>>,
+    mut gizmo_config: ResMut<GizmoConfig>,
 ) {
+    // DEBUG: setup gizmo config
+    gizmo_config.depth_bias = -1.;
+
     // create camera
     commands.spawn((
         Camera3dBundle {
-            transform: Transform::from_xyz(0.0, 10.0, -8.0).looking_at(-Vec3::Z, Vec3::Y),
+            transform: Transform::from_xyz(0.0, 10.0, 8.0).looking_at(Vec3::Z, Vec3::Y),
             ..default()
         },
-        RaycastPickCamera::default(),
+        //RaycastPickCamera::default(),
     ));
 
     // FIXME: test enemy
     commands
-        .spawn(EnemyBundle {
-            follower: Follower::new([
-                Checkpoint::at(Vec2::ZERO), Checkpoint::at(Vec2::Y * 2.0),
-                Checkpoint::at(Vec2::ONE * 2.0), Checkpoint::at(Vec2::X * 2.0),
-                Checkpoint::at(Vec2::ZERO),
-            ]),
-            ..default()
-        })
+        .spawn((
+            EnemyBundle {
+                transform: Transform::from_xyz(6.0, 0.0, 0.0),
+                follower: Follower::new([
+                    Checkpoint::at(Vec2::ZERO), Checkpoint::at(Vec2::Y * 2.0),
+                    Checkpoint::at(Vec2::ONE * 2.0), Checkpoint::at(Vec2::X * 2.0),
+                    Checkpoint::at(Vec2::ZERO),
+                ]),
+                ..default()
+            },
+            Nav::new(Vec3::new(-5.0, 0.0, -3.0)),
+        ))
         .with_children(|parent| {
             parent
                 .spawn(PbrBundle {
-                    mesh: meshes.add(shape::UVSphere::default().into()),
+                    mesh: meshes.add(shape::UVSphere {
+                        radius: 0.25,
+                        sectors: 16,
+                        stacks: 16,
+                    }.into()),
                     material: materials.add(StandardMaterial {
                         base_color: Color::RED,
                         ..default()
                     }),
-                    transform: Transform::from_xyz(0.0, 0.5, 0.0),
+                    transform: Transform::from_xyz(0.0, 0.125, 0.0),
                     ..default()
                 });
 
