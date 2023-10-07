@@ -4,7 +4,7 @@ use spcc::AppState;
 
 use spcc::stage::{StageLoader, StageBuilder};
 use spcc::enemy::{Checkpoint, Follower, EnemyBundle};
-use spcc::tile_map::nav::Nav;
+use spcc::tile_map::nav::{NavBundle, Nav};
 use spcc::stats::{Stat as _, stat};
 
 #[cfg(feature = "debug")]
@@ -90,7 +90,10 @@ pub fn setup(
                 ]),
                 ..default()
             },
-            Nav::new(Vec3::new(-5.0, 0.0, -3.0)),
+            NavBundle {
+                nav: Nav::new(Vec3::new(-5.0, 0.0, -3.0)),
+                ..default()
+            }
         ))
         .with_children(|parent| {
             parent

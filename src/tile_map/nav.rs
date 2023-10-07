@@ -26,23 +26,23 @@ impl Plugin for NavPlugin {
     }
 }
 
+/// A bundle for navigating entities.
+#[derive(Bundle, Clone, Debug, Default)]
+pub struct NavBundle {
+    pub nav: Nav,
+    pub calculated_path: CalculatedPath,
+}
+
 /// An entity that is trying to navigate through an environment.
 #[derive(Clone, Component, Debug, Default)]
 pub struct Nav {
     target: Vec3,
-    path: Vec<Coordinates>,
-    waypoints: VecDeque<Vec3>,
 }
 
 impl Nav {
     /// Creates a new `Nav`.
     pub fn new(target: Vec3) -> Nav {
-        Nav {
-            target,
-            path: Vec::default(),
-
-            waypoints: VecDeque::new(),
-        }
+        Nav { target }
     }
 
     /// The target of the nav.
@@ -54,7 +54,16 @@ impl Nav {
     pub fn set_target(&mut self, target: Vec3) {
         self.target = target;
     }
+}
 
+/// A calculated navigation path for an entity marked [`Nav`].
+#[derive(Clone, Component, Debug, Default)]
+pub struct CalculatedPath {
+    path: Vec<Coordinates>,
+    waypoints: VecDeque<Vec3>,
+}
+
+impl CalculatedPath {
     fn next_waypoint(&self) -> Option<Vec3> {
         self.waypoints.front().copied()
     }
@@ -191,7 +200,7 @@ impl Ord for GridNode {
 }
 
 pub fn compute_navigation(
-    mut query: Query<(&GlobalTransform, &mut Nav)>,
+    mut query: Query<(&GlobalTransform, Ref<Nav>, &mut CalculatedPath)>,
     grid_query: Query<(&Grid, &GlobalTransform)>,
     //tile_query: Query<(&Tile, &Transform)>,
 ) {
@@ -199,10 +208,10 @@ pub fn compute_navigation(
         return;
     };
 
-    for (global_transform, mut nav) in query.iter_mut() {
+    for (global_transform, nav, mut calculated_path) in query.iter_mut() {
         // TODO: do checking to see if a path needs to be rebuilt
-        // for now this only happens once
-        if nav.path.len() > 0 {
+        // for now this only happens once or when the nav is changed
+        if !calculated_path.path.is_empty() && !nav.is_changed() {
             continue;
         }
 
@@ -219,11 +228,12 @@ pub fn compute_navigation(
 
         // pathfind
         if let Ok(path) = pathfinder.find_path(start, target) {
-            nav.path = path;
+            // wtf
+            calculated_path.path = path;
         }
 
         // TODO: string pulling
-        let waypoints = nav
+        let waypoints = calculated_path
             .path
             .iter()
             .map(|c| c.local(0.0))
@@ -231,16 +241,16 @@ pub fn compute_navigation(
             .chain(std::iter::once(nav.target))
             .collect::<VecDeque<_>>();
 
-        nav.waypoints = waypoints;
+        calculated_path.waypoints = waypoints;
     }
 }
 
 pub fn navigation_steering(
-    mut query: Query<(&mut Transform, &mut Nav, &ComputedStat<stat::MoveSpeed>)>,
+    mut query: Query<(&mut Transform, &mut CalculatedPath, &ComputedStat<stat::MoveSpeed>)>,
     time: Res<Time>,
 ) {
-    for (mut transform, mut nav, move_speed) in query.iter_mut() {
-        let Some(next) = nav.next_waypoint() else {
+    for (mut transform, mut path, move_speed) in query.iter_mut() {
+        let Some(next) = path.next_waypoint() else {
             // we are at the end
             continue;
         };
@@ -255,7 +265,7 @@ pub fn navigation_steering(
         if distance <= move_delta {
             // snap to waypoint and pop
             transform.translation = next;
-            nav.pop_waypoint();
+            path.pop_waypoint();
             info!("popped waypoint: {}", next);
         } else {
             // advance towards waypoint
@@ -265,7 +275,7 @@ pub fn navigation_steering(
 }
 
 pub fn debug_show_navigation(
-    query: Query<(&GlobalTransform, &Nav)>,
+    query: Query<(&GlobalTransform, &Nav, &CalculatedPath)>,
     grid_query: Query<&GlobalTransform, With<Grid>>,
     mut gizmos: Gizmos
 ) {
@@ -273,9 +283,9 @@ pub fn debug_show_navigation(
         return;
     };
 
-    for (transform, nav) in query.iter() {
+    for (transform, nav, path) in query.iter() {
         // draw path
-        for (first, next) in nav.path.iter().zip(nav.path.iter().skip(1)) {
+        for (first, next) in path.path.iter().zip(path.path.iter().skip(1)) {
             let start = first.local(0.0);
             let end = next.local(0.0);
 
