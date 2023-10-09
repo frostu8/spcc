@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use spcc::AppState;
 
 use spcc::stage::{StageLoader, StageBuilder};
-use spcc::enemy::{Checkpoint, Follower, EnemyBundle};
+use spcc::battle::{path::{Checkpoint, Follower}, EnemyBundle};
 use spcc::tile_map::nav::NavBundle;
 use spcc::stats::{Stat as _, stat};
 use spcc::effect::HpDecay;
@@ -21,13 +21,15 @@ fn main() {
             #[cfg(feature = "debug")]
             WorldInspectorPlugin::new(),
             spcc::stage::StagePlugin,
-            spcc::enemy::path::PathPlugin,
+            spcc::battle::BattlePlugin,
+            spcc::battle::path::PathPlugin,
             spcc::stats::StatPlugin,
             spcc::tile_map::GridPlugin,
             spcc::tile_map::nav::NavPlugin,
             spcc::material::MaterialPlugin,
             spcc::effect::StatusEffectPlugin,
-            spcc::ui::CoreUiPlugin,
+            spcc::ui::UiPlugin,
+            spcc::geometry::GeometryPlugin,
             //spcc::tile_map::focus::FocusPlugin,
         ))
         .add_state::<AppState>()

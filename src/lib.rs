@@ -1,6 +1,7 @@
+pub mod battle;
 pub mod damage;
-pub mod enemy;
 pub mod effect;
+pub mod geometry;
 pub mod tile_map;
 pub mod material;
 pub mod stage;

@@ -7,9 +7,9 @@ use bevy::ui::UiSystem;
 use crate::damage::Health;
 
 /// The core UI plugin.
-pub struct CoreUiPlugin;
+pub struct UiPlugin;
 
-impl Plugin for CoreUiPlugin {
+impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(

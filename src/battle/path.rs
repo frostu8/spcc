@@ -1,4 +1,10 @@
-//! Pathing systems and components.
+//! Pathing systems and components for enemies.
+//!
+//! This does not actually contain path**finding**. See [`nav`][1] of the
+//! [`tile_map`][2] module.
+//! 
+//! [1]: spcc::tile_map::nav
+//! [2]: spcc::tile_map
 
 use bevy::prelude::*;
 
