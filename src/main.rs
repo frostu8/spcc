@@ -29,6 +29,7 @@ fn main() {
             spcc::tile_map::GridPlugin,
             spcc::tile_map::nav::NavPlugin,
             spcc::material::MaterialPlugin,
+            spcc::damage::DamagePlugin,
             spcc::effect::StatusEffectPlugin,
             spcc::ui::UiPlugin,
             spcc::geometry::GeometryPlugin,
@@ -77,6 +78,12 @@ pub fn setup_tile_map(
                     transform: Transform::from_xyz(0.0, 0.4, 0.0),
                     ..default()
                 });
+
+            parent
+                .spawn((
+                    SpatialBundle::default(),
+                    HpDecay::new(90.0),
+                ));
         });
 
     // FIXME: test enemy
@@ -120,11 +127,6 @@ pub fn setup_tile_map(
                     stat::MoveSpeed::modif().add(0.5),
                 ));
 
-            parent
-                .spawn((
-                    SpatialBundle::default(),
-                    HpDecay::new(90.0),
-                ));
         });
 }
 

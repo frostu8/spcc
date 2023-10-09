@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::tile_map::nav::{Nav, NavSystem};
 use crate::stats::{stat, ComputedStat};
+use crate::damage::DeathEvent;
 
 use super::BoundingCircle;
 
@@ -20,6 +21,8 @@ impl Plugin for BlockingPlugin {
                     disable_nav_for_blocking
                         .before(NavSystem::Steering)
                         .after(start_blocking),
+                    disengage_dead_blockers
+                        .before(disable_nav_for_blocking),
                 )
             );
     }
@@ -28,9 +31,19 @@ impl Plugin for BlockingPlugin {
 /// An entity that can block other entities.
 ///
 /// How much the entity can block is detemrined by the [`stat::Block`].
-#[derive(Clone, Component, Debug, Default)]
+#[derive(Clone, Component, Debug)]
 pub struct Blocker {
+    pub can_block: bool,
     pub blocking: Vec<Entity>,
+}
+
+impl Default for Blocker {
+    fn default() -> Blocker {
+        Blocker {
+            can_block: true,
+            blocking: Vec::new(),
+        }
+    }
 }
 
 /// An entity that can be blocked by another entity.
@@ -42,6 +55,31 @@ pub struct Blockable {
 impl Blockable {
     pub fn is_blocked(&self) -> bool {
         self.blocked_by.is_some()
+    }
+}
+
+pub fn disengage_dead_blockers(
+    mut blocker_query: Query<&mut Blocker>,
+    mut blockable_query: Query<&mut Blockable>,
+    mut death_event_rx: EventReader<DeathEvent>,
+) {
+    for death_event in death_event_rx.iter() {
+        let Ok(mut blocker) = blocker_query.get_mut(death_event.0) else {
+            continue;
+        };
+
+        // clear blockable status
+        for entity in blocker.blocking.iter() {
+            let Ok(mut blockable) = blockable_query.get_mut(*entity) else {
+                continue;
+            };
+
+            blockable.blocked_by = None;
+        }
+
+        // clear blocker status
+        blocker.blocking.clear();
+        blocker.can_block = false;
     }
 }
 
@@ -82,6 +120,10 @@ pub fn start_blocking(
             mut blocker,
             block_stat,
         ) in blocker_query.iter_mut() {
+            if !blocker.can_block {
+                continue;
+            }
+
             // project to 2D XZ plane
             let blocker_pos = Vec2::new(
                 blocker_transform.translation().x,

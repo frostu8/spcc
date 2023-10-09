@@ -10,9 +10,11 @@ pub struct DamagePlugin;
 impl Plugin for DamagePlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_event::<DeathEvent>()
             .add_systems(
                 PostUpdate,
                 (
+                    send_death_event,
                     detect_maxhp_changes,
                 ),
             );
@@ -24,8 +26,7 @@ impl Plugin for DamagePlugin {
 /// This cannot below the entity's [`stat::MaxHp`]. When this hits or goes
 /// below `0`, it will be very bad for the entity...
 ///
-/// Or will it? Listen to [`HealthDepletedEvent`] for when entities health are
-/// depleted.
+/// Or will it? Listen to [`DeathEvent`] for when entities health are depleted.
 #[derive(Clone, Component, Debug)]
 pub struct Health {
     hp: f32,
@@ -63,6 +64,37 @@ impl Default for Health {
     fn default() -> Health {
         // This default is mostly so as to not violate an invariant (max_hp <= 0)
         Health::new(1500.0)
+    }
+}
+
+/// A marker component for dead entities.
+///
+/// Entities that go below zero hp will be marked with this after the
+/// [`send_death_event`] system runs. **However**, this component will *not* be
+/// removed if the unit is "revived."
+#[derive(Clone, Component, Debug, Default)]
+pub struct Dead;
+
+/// An event that fires when an entity's HP reaches zero or below zero.
+///
+/// Logic that prevents death must be done before the [`send_death_event`]
+/// system runs.
+#[derive(Debug, Event)]
+pub struct DeathEvent(pub Entity);
+
+pub fn send_death_event(
+    mut commands: Commands,
+    query: Query<(Entity, &Health), Without<Dead>>,
+    mut death_event_tx: EventWriter<DeathEvent>,
+) {
+    for (entity, health) in query.iter() {
+        if health.hp <= 0.0 {
+            death_event_tx.send(DeathEvent(entity));
+
+            commands
+                .entity(entity)
+                .insert(Dead);
+        }
     }
 }
 
