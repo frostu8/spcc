@@ -38,6 +38,20 @@ pub struct EnemyStatBundle {
     move_speed: StatBundle<stat::MoveSpeed>,
 }
 
+/// A bundle for operator stats.
+#[derive(Clone, Debug, Default, Bundle)]
+pub struct OperatorStatBundle {
+    hp: StatBundle<stat::MaxHp>,
+    atk: StatBundle<stat::Atk>,
+    def: StatBundle<stat::Def>,
+    res: StatBundle<stat::Res>,
+    atk_interval: StatBundle<stat::AtkInterval>,
+    aspd: StatBundle<stat::Aspd>,
+    redeploy_time: StatBundle<stat::RedeployTime>,
+    dp_cost: StatBundle<stat::DpCost>,
+    block: StatBundle<stat::Block>,
+}
+
 /// A bundle used to give an entity a single stat.
 #[derive(Clone, Debug, Default, Bundle)]
 pub struct StatBundle<T>

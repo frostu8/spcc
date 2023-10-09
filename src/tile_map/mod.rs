@@ -102,6 +102,11 @@ impl Grid {
 pub struct Coordinates(IVec2);
 
 impl Coordinates {
+    /// Creates a new `Coordinates`.
+    pub fn new(x: i32, y: i32) -> Coordinates {
+        Coordinates(IVec2::new(x, y))
+    }
+
     /// Returns where the tile placed at this coordinate should be positioned.
     ///
     /// Height is not a factor that is taken into account, so that is up to the

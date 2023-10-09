@@ -3,8 +3,9 @@ use bevy::prelude::*;
 use spcc::AppState;
 
 use spcc::stage::{StageLoader, StageBuilder};
-use spcc::battle::{path::{Checkpoint, Follower}, EnemyBundle};
+use spcc::battle::{path::{Checkpoint, Follower}, EnemyBundle, OperatorBundle};
 use spcc::tile_map::nav::NavBundle;
+use spcc::tile_map::{Coordinates, Grid};
 use spcc::stats::{Stat as _, stat};
 use spcc::effect::HpDecay;
 
@@ -34,17 +35,16 @@ fn main() {
         ))
         .add_state::<AppState>()
         .add_systems(Startup, setup)
-        //.add_systems(Update, setup_tile_map)
+        .add_systems(Update, setup_tile_map)
         .run();
 }
-
-/*
-use spcc::tile_map::{Coordinates, Grid};
 
 pub fn setup_tile_map(
     mut debounce: Local<bool>,
     mut commands: Commands,
     query: Query<Entity, With<Grid>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if *debounce {
         return;
@@ -56,32 +56,27 @@ pub fn setup_tile_map(
 
     *debounce = true;
 
+    // FIXME: test operator
     commands
-        .spawn((
-            SpatialBundle::default()
-        ));
-}
-*/
-
-pub fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut stage_loader: ResMut<StageLoader>,
-    mut app_state: ResMut<NextState<AppState>>,
-    mut gizmo_config: ResMut<GizmoConfig>,
-) {
-    // DEBUG: setup gizmo config
-    gizmo_config.depth_bias = -1.;
-
-    // create camera
-    commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_xyz(0.0, 10.0, 8.0).looking_at(Vec3::Z, Vec3::Y),
-            ..default()
-        },
-        //RaycastPickCamera::default(),
-    ));
+        .spawn(
+            OperatorBundle {
+                coordinates: Coordinates::new(6, 3),
+                ..default()
+            }
+        )
+        .set_parent(grid)
+        .with_children(|parent| {
+            parent
+                .spawn(PbrBundle {
+                    mesh: meshes.add(shape::Cube::new(0.8).into()),
+                    material: materials.add(StandardMaterial {
+                        base_color: Color::CYAN,
+                        ..default()
+                    }),
+                    transform: Transform::from_xyz(0.0, 0.4, 0.0),
+                    ..default()
+                });
+        });
 
     // FIXME: test enemy
     commands
@@ -130,6 +125,25 @@ pub fn setup(
                     HpDecay::new(90.0),
                 ));
         });
+}
+
+pub fn setup(
+    mut commands: Commands,
+    mut stage_loader: ResMut<StageLoader>,
+    mut app_state: ResMut<NextState<AppState>>,
+    mut gizmo_config: ResMut<GizmoConfig>,
+) {
+    // DEBUG: setup gizmo config
+    gizmo_config.depth_bias = -1.;
+
+    // create camera
+    commands.spawn((
+        Camera3dBundle {
+            transform: Transform::from_xyz(0.0, 10.0, 8.0).looking_at(Vec3::Z, Vec3::Y),
+            ..default()
+        },
+        //RaycastPickCamera::default(),
+    ));
 
     // begin stage loading
     stage_loader.load(StageBuilder::new("maps/ccmap.ron"));

@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 use bevy::transform::TransformSystem;
-use bevy::ui::UiSystem;
 
 use crate::damage::Health;
+use crate::battle::Hostility;
 
 /// The core UI plugin.
 pub struct UiPlugin;
@@ -16,14 +16,24 @@ impl Plugin for UiPlugin {
                 PostUpdate,
                 (
                     create_status_bar
-                        .before(UiSystem::Layout),
-                    sync_health_bar,
-                    sync_status_bar_position
-                        .after(TransformSystem::TransformPropagate)
-                        .after(create_status_bar),
+                        .before(bevy::ui::UiSystem::Layout)
+                        .before(UiSystem::SyncStatusBar),
+                    (
+                        sync_health_bar,
+                        sync_status_bar_position
+                            .after(TransformSystem::TransformPropagate)
+                            .after(create_status_bar),
+                    )
+                        .in_set(UiSystem::SyncStatusBar),
                 ),
             );
     }
+}
+
+/// Systems for UI stuff.
+#[derive(Clone, Debug, Eq, Hash, PartialEq, SystemSet)]
+pub enum UiSystem {
+    SyncStatusBar,
 }
 
 /// A UI status bar.
@@ -125,9 +135,16 @@ pub fn sync_status_bar_position(
 /// Creates status bars for newly added [`Health`] components.
 pub fn create_status_bar(
     mut commands: Commands,
-    query: Query<Entity, Added<Health>>,
+    query: Query<(Entity, Option<&Hostility>), Added<Health>>,
 ) {
-    for entity in query.iter() {
+    for (entity, hostility) in query.iter() {
+        let hostility = hostility.copied().unwrap_or_default();
+
+        let health_bar_color = match hostility {
+            Hostility::Hostile => Color::RED,
+            Hostility::Friendly => Color::CYAN,
+        };
+
         // create new health bar
         commands
             .spawn((
@@ -141,9 +158,10 @@ pub fn create_status_bar(
                             style: Style {
                                 // TODO: how big should status bars be?
                                 height: Val::Px(4.0),
-                                width: Val::Px(48.0),
+                                width: Val::Px(56.0),
                                 top: Val::Px(8.0),
-                                left: Val::Px(-48.0 / 2.0),
+                                left: Val::Px(-56.0 / 2.0),
+                                position_type: PositionType::Absolute,
                                 ..default()
                             },
                             background_color: Color::BLACK.into(),
@@ -160,7 +178,7 @@ pub fn create_status_bar(
                                         position_type: PositionType::Absolute,
                                         ..default()
                                     },
-                                    background_color: Color::RED.into(),
+                                    background_color: health_bar_color.into(),
                                     z_index: ZIndex::Local(1),
                                     ..default()
                                 },
