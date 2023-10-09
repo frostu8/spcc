@@ -18,13 +18,27 @@ impl Plugin for NavPlugin {
             .add_systems(
                 Update, 
                 (
-                    compute_navigation,
-                    debug_show_navigation,
+                    compute_navigation
+                        .in_set(NavSystem::Compute),
                     navigation_steering
-                        .after(compute_navigation),
+                        .in_set(NavSystem::Steering)
+                        .after(NavSystem::Compute),
+                    debug_show_navigation
+                        .after(NavSystem::Compute),
                 )
             );
     }
+}
+
+/// Systems for navigation.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, SystemSet)]
+pub enum NavSystem {
+    /// Computes navigation.
+    Compute,
+    /// The steering system.
+    ///
+    /// This actually makes the modifications to the entities' position.
+    Steering,
 }
 
 /// A bundle for navigating entities.
@@ -35,15 +49,19 @@ pub struct NavBundle {
 }
 
 /// An entity that is trying to navigate through an environment.
-#[derive(Clone, Component, Debug, Default)]
+#[derive(Clone, Component, Debug)]
 pub struct Nav {
+    pub active: bool,
     target: Vec3,
 }
 
 impl Nav {
     /// Creates a new `Nav`.
     pub fn new(target: Vec3) -> Nav {
-        Nav { target }
+        Nav {
+            target,
+            active: true,
+        }
     }
 
     /// The target of the nav.
@@ -54,6 +72,15 @@ impl Nav {
     /// Sets the target of the nav.
     pub fn set_target(&mut self, target: Vec3) {
         self.target = target;
+    }
+}
+
+impl Default for Nav {
+    fn default() -> Nav {
+        Nav {
+            target: Vec3::ZERO,
+            active: true,
+        }
     }
 }
 
@@ -224,6 +251,10 @@ pub fn compute_navigation(
             continue;
         }
 
+        if !nav.active {
+            continue;
+        }
+
         let pathfinder = Pathfinder::new(grid);
 
         // do grid-based a* pathfinding
@@ -255,11 +286,15 @@ pub fn compute_navigation(
 }
 
 pub fn navigation_steering(
-    mut query: Query<(Entity, &mut Transform, &mut CalculatedPath, &ComputedStat<stat::MoveSpeed>)>,
+    mut query: Query<(Entity, &mut Transform, &mut CalculatedPath, &Nav, &ComputedStat<stat::MoveSpeed>)>,
     mut finish_tx: EventWriter<NavigationFinishEvent>,
     time: Res<Time>,
 ) {
-    for (id, mut transform, mut path, move_speed) in query.iter_mut() {
+    for (id, mut transform, mut path, nav, move_speed) in query.iter_mut() {
+        if !nav.active {
+            continue;
+        }
+
         let Some(next) = path.next_waypoint() else {
             // we are at the end
             continue;

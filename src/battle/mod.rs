@@ -1,5 +1,6 @@
 //! Battle components.
 
+pub mod blocking;
 pub mod path;
 
 use crate::stats::{EnemyStatBundle, OperatorStatBundle};
@@ -37,6 +38,7 @@ pub struct EnemyBundle {
     pub bounding_circle: BoundingCircle,
     pub health: Health,
     pub follower: path::Follower,
+    pub blockable: blocking::Blockable,
 }
 
 impl Default for EnemyBundle {
@@ -51,6 +53,7 @@ impl Default for EnemyBundle {
             bounding_circle: BoundingCircle::new(0.15),
             health: default(),
             follower: default(),
+            blockable: default(),
         }
     }
 }
@@ -71,6 +74,7 @@ pub struct OperatorBundle {
     pub bounding_circle: BoundingCircle,
     pub health: Health,
     pub coordinates: Coordinates,
+    pub blocker: blocking::Blocker,
 }
 
 impl Default for OperatorBundle {
@@ -85,6 +89,7 @@ impl Default for OperatorBundle {
             bounding_circle: BoundingCircle::new(0.4),
             health: default(),
             coordinates: default(),
+            blocker: default(),
         }
     }
 }

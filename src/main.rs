@@ -23,6 +23,7 @@ fn main() {
             WorldInspectorPlugin::new(),
             spcc::stage::StagePlugin,
             spcc::battle::BattlePlugin,
+            spcc::battle::blocking::BlockingPlugin,
             spcc::battle::path::PathPlugin,
             spcc::stats::StatPlugin,
             spcc::tile_map::GridPlugin,
