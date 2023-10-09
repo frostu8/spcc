@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use bevy::transform::TransformSystem;
+use bevy::ui::UiSystem;
 
 use crate::damage::Health;
 
@@ -14,7 +15,8 @@ impl Plugin for CoreUiPlugin {
             .add_systems(
                 PostUpdate,
                 (
-                    create_status_bar,
+                    create_status_bar
+                        .before(UiSystem::Layout),
                     sync_health_bar,
                     sync_status_bar_position
                         .after(TransformSystem::TransformPropagate)
@@ -67,7 +69,15 @@ fn sync_health_bar(
 
         // do damping
         let distance = health.percentage() - health_bar.percentage;
-        let velocity = (1.0 / health_bar.dampening) * time.delta_seconds();
+
+        if distance.abs() < f32::EPSILON {
+            // do not update to avoid NaN calculations below
+            continue;
+        }
+
+        // dampening function
+        let dampening = (distance.abs() + 0.1) * (1.0 / health_bar.dampening);
+        let velocity = dampening * time.delta_seconds();
         let mut adjusted_distance = distance * velocity;
 
         if adjusted_distance.abs() > distance.abs() {
@@ -146,7 +156,7 @@ pub fn create_status_bar(
                                 NodeBundle {
                                     style: Style {
                                         height: Val::Percent(100.0),
-                                        width: Val::Px(100.0),
+                                        width: Val::Percent(100.0),
                                         position_type: PositionType::Absolute,
                                         ..default()
                                     },
@@ -162,7 +172,7 @@ pub fn create_status_bar(
                                 NodeBundle {
                                     style: Style {
                                         height: Val::Percent(100.0),
-                                        width: Val::Px(100.0),
+                                        width: Val::Percent(100.0),
                                         position_type: PositionType::Absolute,
                                         ..default()
                                     },
@@ -170,7 +180,7 @@ pub fn create_status_bar(
                                     ..default()
                                 },
                                 HealthBar::new(entity)
-                                    .with_dampening(1.0),
+                                    .with_dampening(0.01),
                             ));
                     });
             });

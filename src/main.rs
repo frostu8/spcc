@@ -125,7 +125,7 @@ pub fn setup(
             parent
                 .spawn((
                     SpatialBundle::default(),
-                    HpDecay(60.0),
+                    HpDecay::new(90.0),
                 ));
         });
 
