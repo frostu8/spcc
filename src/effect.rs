@@ -1,6 +1,6 @@
 //! Basic status effects.
 
-use crate::damage::Health;
+use crate::battle::damage::Health;
 
 use std::iter::once;
 use std::time::Duration;

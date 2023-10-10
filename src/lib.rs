@@ -1,5 +1,4 @@
 pub mod battle;
-pub mod damage;
 pub mod effect;
 pub mod geometry;
 pub mod tile_map;

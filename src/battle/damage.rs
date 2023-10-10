@@ -1,4 +1,4 @@
-//! Damage helpers and structs.
+//! Damage helpers and types.
 
 use bevy::prelude::*;
 

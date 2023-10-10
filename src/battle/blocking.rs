@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use crate::tile_map::nav::{Nav, NavSystem};
 use crate::stats::{stat, ComputedStat};
-use crate::damage::DeathEvent;
 
+use super::damage::DeathEvent;
 use super::BoundingCircle;
 
 pub struct BlockingPlugin;

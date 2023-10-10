@@ -1,10 +1,15 @@
-//! Battle components.
+//! Generic battle details.
+//!
+//! Only components and systems that are related to the action of battle should
+//! be placed here, **not** UI or player assistance structs, nor data loading.
 
+pub mod damage;
 pub mod blocking;
 pub mod path;
 
+use damage::Health;
+
 use crate::stats::{EnemyStatBundle, OperatorStatBundle};
-use crate::damage::Health;
 use crate::geometry::BoundingCircle;
 use crate::tile_map::Coordinates;
 

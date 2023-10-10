@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy::transform::TransformSystem;
 
-use crate::damage::Health;
+use crate::battle::damage::Health;
 use crate::battle::Hostility;
 
 /// The core UI plugin.
