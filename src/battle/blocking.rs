@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::tile_map::nav::{Nav, NavSystem};
 use crate::stats::{stat, ComputedStat};
 
-use super::damage::DeathEvent;
+use super::damage::{AttackCycle, DeathEvent};
 use super::BoundingCircle;
 
 pub struct BlockingPlugin;
@@ -22,7 +22,10 @@ impl Plugin for BlockingPlugin {
                         .before(NavSystem::Steering)
                         .after(start_blocking),
                     disengage_dead_blockers
-                        .before(disable_nav_for_blocking),
+                        .before(disable_nav_for_blocking)
+                        .after(start_blocking),
+                    reset_attack_cycles
+                        .after(start_blocking),
                 )
             );
     }
@@ -47,6 +50,9 @@ impl Default for Blocker {
 }
 
 /// An entity that can be blocked by another entity.
+///
+/// If the entity has an `AttackCycle` component, changes to this will reset
+/// the `AttackCycle`.
 #[derive(Clone, Component, Debug, Default)]
 pub struct Blockable {
     pub blocked_by: Option<Entity>,
@@ -55,6 +61,14 @@ pub struct Blockable {
 impl Blockable {
     pub fn is_blocked(&self) -> bool {
         self.blocked_by.is_some()
+    }
+}
+
+pub fn reset_attack_cycles(
+    mut blockable_query: Query<&mut AttackCycle, Changed<Blockable>>,
+) {
+    for mut attack_cycle in blockable_query.iter_mut() {
+        attack_cycle.reset();
     }
 }
 

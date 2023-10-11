@@ -1,3 +1,5 @@
+#![feature(div_duration)]
+
 pub mod battle;
 pub mod effect;
 pub mod geometry;

@@ -1,9 +1,11 @@
 use bevy::prelude::*;
 
+use std::time::Duration;
+
 use spcc::AppState;
 
 use spcc::stage::{StageLoader, StageBuilder};
-use spcc::battle::{path::{Checkpoint, Follower}, EnemyBundle, OperatorBundle};
+use spcc::battle::{path::{Checkpoint, Follower}, damage::AttackCycle, EnemyBundle, OperatorBundle};
 use spcc::tile_map::nav::NavBundle;
 use spcc::tile_map::{Coordinates, Grid};
 use spcc::stats::{Stat as _, stat};
@@ -103,6 +105,7 @@ pub fn setup_tile_map(
                 ]),
                 ..default()
             },
+            AttackCycle::new(Duration::from_millis(200), Duration::from_millis(150)),
             NavBundle::default(),
         ))
         .with_children(|parent| {
