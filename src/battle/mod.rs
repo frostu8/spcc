@@ -3,6 +3,7 @@
 //! Only components and systems that are related to the action of battle should
 //! be placed here, **not** UI or player assistance structs, nor data loading.
 
+pub mod auto_attack;
 pub mod damage;
 pub mod blocking;
 pub mod path;

@@ -5,7 +5,8 @@ use bevy::prelude::*;
 use crate::tile_map::nav::{Nav, NavSystem};
 use crate::stats::{stat, ComputedStat};
 
-use super::damage::{AttackCycle, DeathEvent};
+use super::damage::DeathEvent;
+use super::auto_attack::AttackCycle;
 use super::BoundingCircle;
 
 pub struct BlockingPlugin;

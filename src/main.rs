@@ -5,7 +5,7 @@ use std::time::Duration;
 use spcc::AppState;
 
 use spcc::stage::{StageLoader, StageBuilder};
-use spcc::battle::{path::{Checkpoint, Follower}, damage::AttackCycle, EnemyBundle, OperatorBundle};
+use spcc::battle::{path::{Checkpoint, Follower}, auto_attack::AttackCycle, EnemyBundle, OperatorBundle};
 use spcc::tile_map::nav::NavBundle;
 use spcc::tile_map::{Coordinates, Grid};
 use spcc::stats::{Stat as _, stat};
@@ -27,6 +27,7 @@ fn main() {
             spcc::battle::BattlePlugin,
             spcc::battle::blocking::BlockingPlugin,
             spcc::battle::path::PathPlugin,
+            spcc::battle::auto_attack::AutoAttackPlugin,
             spcc::battle::damage::DamagePlugin,
             spcc::stats::StatPlugin,
             spcc::tile_map::GridPlugin,
