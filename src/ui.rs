@@ -141,7 +141,7 @@ pub fn create_status_bar(
         let hostility = hostility.copied().unwrap_or_default();
 
         let health_bar_color = match hostility {
-            Hostility::Hostile => Color::RED,
+            Hostility::Neutral | Hostility::Hostile => Color::RED,
             Hostility::Friendly => Color::CYAN,
         };
 

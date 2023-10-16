@@ -5,11 +5,11 @@ use std::time::Duration;
 use spcc::AppState;
 
 use spcc::stage::{StageLoader, StageBuilder};
-use spcc::battle::{path::{Checkpoint, Follower}, auto_attack::AttackCycle, EnemyBundle, OperatorBundle};
+use spcc::battle::{path::{Checkpoint, Follower}, auto_attack::AttackCycle, targeting::Range, EnemyBundle, OperatorBundle};
 use spcc::tile_map::nav::NavBundle;
 use spcc::tile_map::{Coordinates, Grid};
 use spcc::stats::{Stat as _, stat};
-use spcc::effect::HpDecay;
+//use spcc::effect::HpDecay;
 
 #[cfg(feature = "debug")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -24,18 +24,15 @@ fn main() {
             #[cfg(feature = "debug")]
             WorldInspectorPlugin::new(),
             spcc::stage::StagePlugin,
-            spcc::battle::BattlePlugin,
-            spcc::battle::blocking::BlockingPlugin,
-            spcc::battle::path::PathPlugin,
-            spcc::battle::auto_attack::AutoAttackPlugin,
-            spcc::battle::damage::DamagePlugin,
+            spcc::battle::BattlePlugins,
             spcc::stats::StatPlugin,
             spcc::tile_map::GridPlugin,
             spcc::tile_map::nav::NavPlugin,
             spcc::material::MaterialPlugin,
             spcc::effect::StatusEffectPlugin,
             spcc::ui::UiPlugin,
-            spcc::geometry::GeometryPlugin,
+            // DEBUG:
+            spcc::battle::DebugDrawPlugin,
             //spcc::tile_map::focus::FocusPlugin,
         ))
         .add_state::<AppState>()
@@ -63,12 +60,18 @@ pub fn setup_tile_map(
 
     // FIXME: test operator
     commands
-        .spawn(
+        .spawn((
             OperatorBundle {
                 coordinates: Coordinates::new(6, 3),
                 ..default()
-            }
-        )
+            },
+            Range::from_vertices([
+                Vec2::new(1.5, -0.5),
+                Vec2::new(1.5, 0.5),
+                Vec2::new(-0.5, 0.5),
+                Vec2::new(-0.5, -0.5),
+            ]),
+        ))
         .set_parent(grid)
         .with_children(|parent| {
             parent
@@ -82,11 +85,12 @@ pub fn setup_tile_map(
                     ..default()
                 });
 
+            /*
             parent
                 .spawn((
                     SpatialBundle::default(),
                     HpDecay::new(90.0),
-                ));
+                ));*/
         });
 
     // FIXME: test enemy
@@ -104,6 +108,7 @@ pub fn setup_tile_map(
                     Checkpoint::at(Vec2::new(0.0, 0.0)),
                     Checkpoint::at(Vec2::new(6.0, 3.0)),
                 ]),
+                hatred: spcc::battle::targeting::Hatred(1),
                 ..default()
             },
             AttackCycle::new(Duration::from_millis(200), Duration::from_millis(150)),
