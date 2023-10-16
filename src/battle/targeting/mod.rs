@@ -1,4 +1,8 @@
 //! Targeting structs.
+//!
+//! For an entity to be targetable, it needs a [`BoundingCircle`] component (to
+//! determine whether the entity is in range) and a [`Hatred`] component (to
+//! sort multiple targets).
 
 mod priority;
 
