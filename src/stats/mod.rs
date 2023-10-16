@@ -6,8 +6,10 @@
 pub mod stat;
 
 use std::ops::Deref;
+use std::iter::once;
 
 use bevy::prelude::*;
+use bevy::ecs::query::WorldQuery;
 
 pub struct StatPlugin;
 
@@ -266,4 +268,25 @@ impl AddStatExt for App {
         
         self
     }
+}
+
+/// Finds stats.
+pub fn find_stats<'a, T>(
+    entity: Entity,
+    parents_query: &Query<&Parent>,
+    query: &'a Query<T>,
+) -> Option<<T::ReadOnly as WorldQuery>::Item<'a>>
+where
+    T: WorldQuery,
+{
+    // adjust timer based on parent or current entity stats
+    for parent in once(entity).chain(parents_query.iter_ancestors(entity)) {
+        let Ok(t) = query.get(parent) else {
+            continue;
+        };
+
+        return Some(t);
+    }
+
+    None
 }

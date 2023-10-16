@@ -5,7 +5,13 @@ use std::time::Duration;
 use spcc::AppState;
 
 use spcc::stage::{StageLoader, StageBuilder};
-use spcc::battle::{path::{Checkpoint, Follower}, auto_attack::AttackCycle, targeting::Range, EnemyBundle, OperatorBundle};
+use spcc::battle::{
+    path::{Checkpoint, Follower},
+    auto_attack::{AttackCycle, Melee},
+    targeting::Range,
+    EnemyBundle,
+    OperatorBundle,
+};
 use spcc::tile_map::nav::NavBundle;
 use spcc::tile_map::{Coordinates, Grid};
 use spcc::stats::{Stat as _, stat};
@@ -65,6 +71,8 @@ pub fn setup_tile_map(
                 coordinates: Coordinates::new(6, 3),
                 ..default()
             },
+            AttackCycle::new(Duration::from_millis(200), Duration::from_millis(150)),
+            Melee::default(),
             Range::from_vertices([
                 Vec2::new(1.5, -0.5),
                 Vec2::new(1.5, 0.5),

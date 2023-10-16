@@ -86,7 +86,7 @@ fn sync_health_bar(
         }
 
         // dampening function
-        let dampening = (distance.abs() + 0.1) * (1.0 / health_bar.dampening);
+        let dampening = ((distance.abs() * distance.abs()) / 0.5 + 0.5) * (1.0 / health_bar.dampening);
         let velocity = dampening * time.delta_seconds();
         let mut adjusted_distance = distance * velocity;
 
@@ -198,7 +198,7 @@ pub fn create_status_bar(
                                     ..default()
                                 },
                                 HealthBar::new(entity)
-                                    .with_dampening(0.01),
+                                    .with_dampening(0.075),
                             ));
                     });
             });

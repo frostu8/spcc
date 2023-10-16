@@ -2,10 +2,12 @@
 
 use bevy::prelude::*;
 
-use std::iter::once;
 use std::time::Duration;
 
-use crate::stats::{stat, ComputedStat};
+use crate::stats::{find_stats, stat, ComputedStat};
+
+use super::targeting::{Targets, TargetingSystems};
+use super::damage::Health;
 
 pub struct AutoAttackPlugin;
 
@@ -15,8 +17,20 @@ impl Plugin for AutoAttackPlugin {
             .add_systems(
                 Update,
                 tick_attack_cycle_timers,
+            )
+            .add_systems(
+                Update,
+                do_melee_auto_attack
+                    .after(tick_attack_cycle_timers)
+                    .after(TargetingSystems::SearchTargets),
             );
     }
+}
+
+/// An autoattack scheme that does damage as soon as the frontswing concludes.
+#[derive(Clone, Component, Debug, Default)]
+pub struct Melee {
+    in_frontswing: bool,
 }
 
 /// Basic attack cycling.
@@ -151,7 +165,12 @@ impl AttackCycle {
         // tick timer
         self.timer.tick(delta);
 
-        if self.standby && self.timer.just_finished() {
+        if self.standby && (
+            // timer finished
+            self.timer.just_finished()
+            // or timer hasn't passed past the frontswing
+            || self.timer.elapsed() < self.scaled_frontswing
+        ) {
             // clamp timer
             self.timer.set_elapsed(Duration::ZERO);
         }
@@ -182,6 +201,35 @@ impl AttackCycle {
     }
 }
 
+pub fn do_melee_auto_attack(
+    mut query: Query<(Entity, &AttackCycle, &Targets, &mut Melee)>,
+    mut health_query: Query<&mut Health>,
+    parents_query: Query<&Parent>,
+    atk_stats_query: Query<&ComputedStat<stat::Atk>>,
+) {
+    for (entity, attack_cycle, targets, mut melee) in query.iter_mut() {
+        // check if we can do an attack
+        if !attack_cycle.in_frontswing() && melee.in_frontswing {
+            let Some(atk) = find_stats(entity, &parents_query, &atk_stats_query) else {
+                continue;
+            };
+
+            for target in targets.iter() {
+                // TODO: do damage reduction shit
+                // aka we shouldn't modify health directly like this
+                let Ok(mut health) = health_query.get_mut(*target) else {
+                    continue;
+                };
+
+                let current_hp = health.get();
+                health.set(current_hp - atk.get() as f32);
+            }
+        }
+
+        melee.in_frontswing = attack_cycle.in_frontswing();
+    }
+}
+
 pub fn tick_attack_cycle_timers(
     mut query: Query<(Entity, &mut AttackCycle)>,
     parents_query: Query<&Parent>,
@@ -190,21 +238,19 @@ pub fn tick_attack_cycle_timers(
 ) {
     for (entity, mut attack_cycle) in query.iter_mut() {
         // adjust timer based on parent or current entity stats
-        for parent in parents_query.iter_ancestors(entity).chain(once(entity)) {
-            let Ok((atk_interval, aspd)) = aspd_stats_query.get(parent) else {
-                continue;
-            };
+        let Some((atk_interval, aspd)) = find_stats(entity, &parents_query, &aspd_stats_query) else {
+            continue;
+        };
 
-            // find attack interval
-            let atk_interval = if aspd.get() > 0 {
-                Duration::from_secs_f32(atk_interval.get() + (100.0 / aspd.get() as f32))
-            } else {
-                Duration::MAX
-            };
+        // find attack interval
+        let atk_interval = if aspd.get() > 0 {
+            Duration::from_secs_f32(atk_interval.get() + (100.0 / aspd.get() as f32))
+        } else {
+            Duration::MAX
+        };
 
-            // set interval
-            attack_cycle.set_interval(atk_interval);
-        }
+        // set interval
+        attack_cycle.set_interval(atk_interval);
 
         attack_cycle.tick(time.delta());
     }
