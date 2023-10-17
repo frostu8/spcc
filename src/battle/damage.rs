@@ -2,6 +2,8 @@
 
 use bevy::prelude::*;
 
+use std::time::Duration;
+
 use crate::stats::{find_stats, stat, ComputedStat};
 
 /// Plugin for damage.
@@ -14,8 +16,11 @@ impl Plugin for DamagePlugin {
             .add_event::<DamageReceivedEvent>()
             .add_systems(
                 Update,
-                accumulate_damage
-                    .in_set(DamageSystems::AccumulateDamage),
+                (
+                    accumulate_damage
+                        .in_set(DamageSystems::AccumulateDamage),
+                    despawn_on_death,
+                ),
             )
             .add_systems(
                 PostUpdate,
@@ -136,6 +141,25 @@ impl DamageReceivedEvent {
     }
 }
 
+/// A marker component for entities that will despawn after a set amount of
+/// time.
+///
+/// Typically used for enemies only, as operators will lose persistant buffs if
+/// they despawn on death.
+#[derive(Clone, Component, Debug, Default)]
+pub struct DespawnOnDeath {
+    timer: Timer,
+}
+
+impl DespawnOnDeath {
+    /// Creates a new `DespawnOnDeath`.
+    pub fn new(duration: Duration) -> DespawnOnDeath {
+        DespawnOnDeath {
+            timer: Timer::new(duration, TimerMode::Once),
+        }
+    }
+}
+
 /// A marker component for dead entities.
 ///
 /// Entities that go below zero hp will be marked with this after the
@@ -203,6 +227,22 @@ pub fn accumulate_damage(
                 let current_hp = health.get();
                 health.set(current_hp - reduced);
             }
+        }
+    }
+}
+
+pub fn despawn_on_death(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut DespawnOnDeath), With<Dead>>,
+    time: Res<Time>,
+) {
+    for (entity, mut despawn_on_death) in query.iter_mut() {
+        despawn_on_death.timer.tick(time.delta());
+
+        if despawn_on_death.timer.just_finished() {
+            commands
+                .entity(entity)
+                .despawn_recursive();
         }
     }
 }

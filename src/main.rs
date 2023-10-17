@@ -134,6 +134,7 @@ pub fn setup_tile_map(
             },
             AttackCycle::new(Duration::from_millis(200), Duration::from_millis(150)),
             NavBundle::default(),
+            spcc::battle::damage::DespawnOnDeath::new(Duration::from_millis(200)),
         ))
         .with_children(|parent| {
             parent
