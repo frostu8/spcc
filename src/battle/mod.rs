@@ -13,7 +13,7 @@ use damage::Health;
 
 use targeting::{Targeting, Targets, Stealth, Hatred};
 
-use crate::stats::{EnemyStatBundle, OperatorStatBundle};
+pub use crate::stats::{StatBundle, EnemyStatBundle, OperatorStatBundle};
 use crate::tile_map::Coordinates;
 
 use parry2d::shape::Ball;

@@ -10,7 +10,10 @@ use spcc::battle::{
     auto_attack::{AttackCycle, Melee},
     targeting::Range,
     EnemyBundle,
+    EnemyStatBundle,
     OperatorBundle,
+    OperatorStatBundle,
+    StatBundle,
 };
 use spcc::tile_map::nav::NavBundle;
 use spcc::tile_map::{Coordinates, Grid};
@@ -69,6 +72,10 @@ pub fn setup_tile_map(
         .spawn((
             OperatorBundle {
                 coordinates: Coordinates::new(6, 3),
+                stats: OperatorStatBundle {
+                    atk_interval: StatBundle::new(stat::AtkInterval::new(0.5)),
+                    ..default()
+                },
                 ..default()
             },
             AttackCycle::new(Duration::from_millis(200), Duration::from_millis(150)),
@@ -116,6 +123,12 @@ pub fn setup_tile_map(
                     Checkpoint::at(Vec2::new(0.0, 0.0)),
                     Checkpoint::at(Vec2::new(6.0, 3.0)),
                 ]),
+                stats: EnemyStatBundle {
+                    hp: StatBundle::new(stat::MaxHp::new(4000.0)),
+                    def: StatBundle::new(stat::Def::new(80)),
+                    res: StatBundle::new(stat::Res::new(0)),
+                    ..default()
+                },
                 hatred: spcc::battle::targeting::Hatred(1),
                 ..default()
             },

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::stats::{stat, ComputedStat};
+use crate::stats::{find_stats, stat, ComputedStat};
 
 /// Plugin for damage.
 pub struct DamagePlugin;
@@ -11,6 +11,12 @@ impl Plugin for DamagePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_event::<DeathEvent>()
+            .add_event::<DamageReceivedEvent>()
+            .add_systems(
+                Update,
+                accumulate_damage
+                    .in_set(DamageSystems::AccumulateDamage),
+            )
             .add_systems(
                 PostUpdate,
                 (
@@ -21,11 +27,19 @@ impl Plugin for DamagePlugin {
     }
 }
 
+/// Damage systems.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, SystemSet)]
+pub enum DamageSystems {
+    /// Gathers all damage received events and calculates a final result.
+    AccumulateDamage,
+}
+
 /// Damage type.
 ///
 /// Determines how final damage will be calculated.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum DamageType {
+    #[default]
     Physical,
     Arts,
     True,
@@ -77,6 +91,51 @@ impl Default for Health {
     }
 }
 
+/// Damage received event.
+///
+/// This is raw damage in its purest form. These events document nearly every
+/// instance of damage. Each event is one instance of damage, which will
+/// **not** be consolidated when it eventually reaches the entity. These events
+/// are not necessarily sent by the damage system, but systems should make an
+/// effort ot send these before the damage consolidation system.
+///
+/// This is just so that individual systems do not have to worry about
+/// resistant features (there is a lot) and unifies them under a sinngle
+/// confound.
+#[derive(Clone, Debug, Event)]
+pub struct DamageReceivedEvent {
+    pub entity: Entity,
+    pub damage_type: DamageType,
+    pub damage: f32,
+}
+
+impl DamageReceivedEvent {
+    /// Creates a new `DamageReceivedEvent`.
+    pub fn new(entity: Entity) -> DamageReceivedEvent {
+        DamageReceivedEvent {
+            entity,
+            damage_type: DamageType::Physical,
+            damage: 0.0,
+        }
+    }
+
+    /// Constructs a `DamageReceivedEvent` with a [`DamageType`].
+    pub fn with_type(self, damage_type: DamageType) -> DamageReceivedEvent {
+        DamageReceivedEvent {
+            damage_type,
+            ..self
+        }
+    }
+
+    /// Constructs a `DamageReceivedEvent` with a damage amount.
+    pub fn with_damage(self, damage: f32) -> DamageReceivedEvent {
+        DamageReceivedEvent {
+            damage,
+            ..self
+        }
+    }
+}
+
 /// A marker component for dead entities.
 ///
 /// Entities that go below zero hp will be marked with this after the
@@ -91,6 +150,62 @@ pub struct Dead;
 /// system runs.
 #[derive(Debug, Event)]
 pub struct DeathEvent(pub Entity);
+
+/// Accumulates damage received as [`DamageReceivedEvent`]s.
+pub fn accumulate_damage(
+    mut damage_event_rx: EventReader<DamageReceivedEvent>,
+    mut query: Query<&mut Health>,
+    parents_query: Query<&Parent>,
+    def_stat_query: Query<&ComputedStat<stat::Def>>,
+    res_stat_query: Query<&ComputedStat<stat::Res>>,
+) {
+    for event in damage_event_rx.iter() {
+        let Ok(mut health) = query.get_mut(event.entity) else {
+            continue;
+        };
+
+        // match damage types
+        match event.damage_type {
+            DamageType::True => {
+                // simply apply the damage
+                let current_hp = health.get();
+                health.set(current_hp - event.damage);
+            }
+            DamageType::Physical => {
+                // get def
+                let def = find_stats(
+                    event.entity,
+                    &parents_query,
+                    &def_stat_query,
+                )
+                    .map(|s| s.get())
+                    .unwrap_or_default();
+
+                // reduce damage
+                let reduced = (event.damage - def as f32).max(event.damage * 0.05);
+
+                let current_hp = health.get();
+                health.set(current_hp - reduced);
+            }
+            DamageType::Arts => {
+                // get res
+                let res = find_stats(
+                    event.entity,
+                    &parents_query,
+                    &res_stat_query,
+                )
+                    .map(|s| s.get())
+                    .unwrap_or_default();
+
+                // reduce damage
+                let reduced = (event.damage * (res as f32)).max(event.damage * 0.05);
+
+                let current_hp = health.get();
+                health.set(current_hp - reduced);
+            }
+        }
+    }
+}
 
 pub fn send_death_event(
     mut commands: Commands,
@@ -109,12 +224,20 @@ pub fn send_death_event(
 }
 
 pub fn detect_maxhp_changes(
-    mut query: Query<(&mut Health, &ComputedStat<stat::MaxHp>), Changed<ComputedStat<stat::MaxHp>>>,
+    mut query: Query<(Entity, &mut Health)>,
+    parents_query: Query<&Parent>,
+    max_hp_stat_query: Query<&ComputedStat<stat::MaxHp>>,
 ) {
-    for (mut health, max_hp) in query.iter_mut() {
-        // adjust max hp
-        health.hp = health.hp * max_hp.get() / health.max_hp;
-        health.max_hp = max_hp.get();
+    for (entity, mut health) in query.iter_mut() {
+        let Some(max_hp) = find_stats(entity, &parents_query, &max_hp_stat_query) else {
+            continue;
+        };
+
+        if max_hp.get() != health.max_hp {
+            // adjust max hp
+            health.hp = health.hp * max_hp.get() / health.max_hp;
+            health.max_hp = max_hp.get();
+        }
     }
 }
 

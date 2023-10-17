@@ -31,27 +31,27 @@ impl Plugin for StatPlugin {
 /// A bundle for enemy stats.
 #[derive(Clone, Debug, Default, Bundle)]
 pub struct EnemyStatBundle {
-    hp: StatBundle<stat::MaxHp>,
-    atk: StatBundle<stat::Atk>,
-    def: StatBundle<stat::Def>,
-    res: StatBundle<stat::Res>,
-    atk_interval: StatBundle<stat::AtkInterval>,
-    aspd: StatBundle<stat::Aspd>,
-    move_speed: StatBundle<stat::MoveSpeed>,
+    pub hp: StatBundle<stat::MaxHp>,
+    pub atk: StatBundle<stat::Atk>,
+    pub def: StatBundle<stat::Def>,
+    pub res: StatBundle<stat::Res>,
+    pub atk_interval: StatBundle<stat::AtkInterval>,
+    pub aspd: StatBundle<stat::Aspd>,
+    pub move_speed: StatBundle<stat::MoveSpeed>,
 }
 
 /// A bundle for operator stats.
 #[derive(Clone, Debug, Default, Bundle)]
 pub struct OperatorStatBundle {
-    hp: StatBundle<stat::MaxHp>,
-    atk: StatBundle<stat::Atk>,
-    def: StatBundle<stat::Def>,
-    res: StatBundle<stat::Res>,
-    atk_interval: StatBundle<stat::AtkInterval>,
-    aspd: StatBundle<stat::Aspd>,
-    redeploy_time: StatBundle<stat::RedeployTime>,
-    dp_cost: StatBundle<stat::DpCost>,
-    block: StatBundle<stat::Block>,
+    pub hp: StatBundle<stat::MaxHp>,
+    pub atk: StatBundle<stat::Atk>,
+    pub def: StatBundle<stat::Def>,
+    pub res: StatBundle<stat::Res>,
+    pub atk_interval: StatBundle<stat::AtkInterval>,
+    pub aspd: StatBundle<stat::Aspd>,
+    pub redeploy_time: StatBundle<stat::RedeployTime>,
+    pub dp_cost: StatBundle<stat::DpCost>,
+    pub block: StatBundle<stat::Block>,
 }
 
 /// A bundle used to give an entity a single stat.

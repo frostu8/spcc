@@ -7,7 +7,7 @@ use std::time::Duration;
 use crate::stats::{find_stats, stat, ComputedStat};
 
 use super::targeting::{Targets, TargetingSystems};
-use super::damage::Health;
+use super::damage::{DamageType, DamageReceivedEvent};
 
 pub struct AutoAttackPlugin;
 
@@ -30,6 +30,7 @@ impl Plugin for AutoAttackPlugin {
 /// An autoattack scheme that does damage as soon as the frontswing concludes.
 #[derive(Clone, Component, Debug, Default)]
 pub struct Melee {
+    damage_type: DamageType,
     in_frontswing: bool,
 }
 
@@ -203,7 +204,7 @@ impl AttackCycle {
 
 pub fn do_melee_auto_attack(
     mut query: Query<(Entity, &AttackCycle, &Targets, &mut Melee)>,
-    mut health_query: Query<&mut Health>,
+    mut damage_received_tx: EventWriter<DamageReceivedEvent>,
     parents_query: Query<&Parent>,
     atk_stats_query: Query<&ComputedStat<stat::Atk>>,
 ) {
@@ -215,14 +216,9 @@ pub fn do_melee_auto_attack(
             };
 
             for target in targets.iter() {
-                // TODO: do damage reduction shit
-                // aka we shouldn't modify health directly like this
-                let Ok(mut health) = health_query.get_mut(*target) else {
-                    continue;
-                };
-
-                let current_hp = health.get();
-                health.set(current_hp - atk.get() as f32);
+                damage_received_tx.send(DamageReceivedEvent::new(*target)
+                    .with_type(melee.damage_type)
+                    .with_damage(atk.get() as f32));
             }
         }
 
@@ -244,7 +240,7 @@ pub fn tick_attack_cycle_timers(
 
         // find attack interval
         let atk_interval = if aspd.get() > 0 {
-            Duration::from_secs_f32(atk_interval.get() + (100.0 / aspd.get() as f32))
+            Duration::from_secs_f32(atk_interval.get() * (100.0 / aspd.get() as f32))
         } else {
             Duration::MAX
         };
