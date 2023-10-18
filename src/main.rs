@@ -38,7 +38,7 @@ fn main() {
             spcc::tile_map::GridPlugin,
             spcc::tile_map::nav::NavPlugin,
             spcc::material::MaterialPlugin,
-            spcc::effect::StatusEffectPlugin,
+            spcc::status::StatusPlugin,
             spcc::ui::UiPlugin,
             // DEBUG:
             spcc::battle::DebugDrawPlugin,
