@@ -1,7 +1,7 @@
 //! Basic status effects.
 
 use crate::battle::damage::{DamageType, DamageReceivedEvent, Health};
-use crate::stats::{Modifier, stat, Stat};
+use crate::stats::{Modifier, stat};
 use crate::find_parent;
 
 use std::time::Duration;
@@ -28,16 +28,16 @@ impl Plugin for StatusPlugin {
 /// for more information.
 #[derive(Bundle, Clone)]
 pub struct ActivatedOriginiumStatus {
-    atk_buff: <stat::Atk as Stat>::Modifier,
-    aspd_buff: <stat::Aspd as Stat>::Modifier,
+    atk_buff: stat::AtkModifier,
+    aspd_buff: stat::AspdModifier,
     hp_decay: HpDecay,
 }
 
 impl Default for ActivatedOriginiumStatus {
     fn default() -> ActivatedOriginiumStatus {
         ActivatedOriginiumStatus {
-            atk_buff: <stat::Atk as Stat>::Modifier::identity().add(600),
-            aspd_buff: <stat::Aspd as Stat>::Modifier::identity().add(50),
+            atk_buff: stat::AtkModifier::identity().add(600),
+            aspd_buff: stat::AspdModifier::identity().add(50),
             hp_decay: HpDecay::new(150.0),
         }
     }

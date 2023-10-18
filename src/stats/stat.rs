@@ -32,6 +32,10 @@ macro_rules! impl_stat_i32 {
                 self.0 = res.clamp($min, $max);
             }
         }
+
+        paste::paste! {
+            pub type [<$name Modifier>] = <$name as crate::stats::Stat>::Modifier;
+        }
     };
     ($name:ty, min: $min:literal) => {
         impl $name {
@@ -61,6 +65,10 @@ macro_rules! impl_stat_i32 {
                 // clamp
                 self.0 = res.max($min);
             }
+        }
+
+        paste::paste! {
+            pub type [<$name Modifier>] = <$name as crate::stats::Stat>::Modifier;
         }
     }
 }
@@ -94,6 +102,10 @@ macro_rules! impl_stat_f32 {
                 // clamp
                 self.0 = res.max($min);
             }
+        }
+
+        paste::paste! {
+            pub type [<$name Modifier>] = <$name as crate::stats::Stat>::Modifier;
         }
     }
 }

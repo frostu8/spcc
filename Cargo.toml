@@ -17,6 +17,7 @@ bevy-inspector-egui = { version = "0.19", optional = true }
 serde = { version = "1.0.188", features = ["derive"] }
 parry2d = "0.13"
 nalgebra = { version = "0.32", features = ["convert-glam024"] }
+paste = "1.0"
 #bevy_mod_picking = { version = "0.15.0", default-features = false, features = ["backend_raycast"] }
 
 # Enable a small amount of optimization in debug mode
