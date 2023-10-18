@@ -2,8 +2,8 @@
 
 pub mod battle;
 pub mod tile_map;
+pub mod loader;
 pub mod material;
-pub mod stage;
 pub mod stats;
 pub mod status;
 pub mod ui;

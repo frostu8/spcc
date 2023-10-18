@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use spcc::AppState;
 
-use spcc::stage::{StageLoader, StageBuilder};
+use spcc::loader::{LoadStageEvent, StageBuilder};
 use spcc::battle::{
     path::{Checkpoint, Follower},
     auto_attack::{AttackCycle, Melee},
@@ -32,7 +32,7 @@ fn main() {
             //DefaultPickingPlugins,
             #[cfg(feature = "debug")]
             WorldInspectorPlugin::new(),
-            spcc::stage::StagePlugin,
+            spcc::loader::LoaderPlugin,
             spcc::battle::BattlePlugins,
             spcc::stats::StatPlugin,
             spcc::tile_map::GridPlugin,
@@ -167,8 +167,7 @@ pub fn setup_tile_map(
 
 pub fn setup(
     mut commands: Commands,
-    mut stage_loader: ResMut<StageLoader>,
-    mut app_state: ResMut<NextState<AppState>>,
+    mut stage_load_tx: EventWriter<LoadStageEvent>,
     mut gizmo_config: ResMut<GizmoConfig>,
 ) {
     // DEBUG: setup gizmo config
@@ -184,8 +183,5 @@ pub fn setup(
     ));
 
     // begin stage loading
-    stage_loader.load(StageBuilder::new("maps/ccmap.ron"));
-
-    // start setup
-    app_state.set(AppState::StageLoading);
+    stage_load_tx.send(StageBuilder::new("maps/ccmap.ron").into());
 }

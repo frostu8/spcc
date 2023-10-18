@@ -1,8 +1,10 @@
-//! Structs that help load maps from files.
+//! Types for saving and loading maps.
 //!
-//! Until a bevy editor exists (which it won't by the time I finish this
-//! project), here is a ridiculously crude scene loading system. Most of this
-//! code is "hack quality" at best.
+//! The map is uniquely defined as all of the constants of a stage: the static
+//! models, the environment and lighting, the enemies that spawn, etc. Although
+//! these technically can be modified by contracts and other nonsense, these
+//! aren't typically things that can be directly varied by the player, unlike
+//! selected contracts, operators and event-specific tools.
 
 use serde::Deserialize;
 use serde::de::{self, Deserializer, Visitor};
@@ -14,10 +16,9 @@ use bevy::prelude::*;
 
 use iyes_progress::prelude::*;
 
-use bevy_common_assets::ron::RonAssetPlugin;
-
-use crate::AppState;
 use crate::tile_map::{self, GridBundle, TileBundle, TileKind};
+
+use super::StageAssets;
 
 /// A map.
 ///
@@ -106,86 +107,38 @@ where
     deserializer.deserialize_string(HexVisitor)
 }
 
-/// Stage plugin.
-pub struct StagePlugin;
-
-impl Plugin for StagePlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .insert_resource(StageLoader::default())
-            .add_plugins(ProgressPlugin::new(AppState::StageLoading)
-                .continue_to(AppState::InGame)
-                .track_assets())
-            .add_systems(OnEnter(AppState::StageLoading), load_stage)
-            .add_systems(Update, load_map.run_if(in_state(AppState::StageLoading)))
-            .add_plugins(RonAssetPlugin::<Map>::new(&["ron"]));
-    }
-}
-
-/// A stage builder.
-#[derive(Default)]
-pub struct StageBuilder {
-    /// The map as a path.
-    map: String,
-}
-
-impl StageBuilder {
-    /// Creates a new stage builder, to the specified map.
-    pub fn new(map_path: impl Into<String>) -> StageBuilder {
-        StageBuilder {
-            map: map_path.into(),
-        }
-    }
-}
-
-/// The stage loader resource.
+/// The entity that contains all static models and the grid of a map.
 ///
-/// Loads the map, which includes static models, enemies and environmental
-/// conditions, and also loads operator resources. Also loads contingencies.
-#[derive(Default, Resource)]
-pub struct StageLoader {
-    builder: StageBuilder,
-    map: Handle<Map>,
-    map_entity: Option<Entity>,
-}
-
-impl StageLoader {
-    /// Queues setup for a stage on the stage loader.
-    ///
-    /// To trigger the loading, the [`AppState`] **must** be set to
-    /// [`AppState::StageLoading`].
-    pub fn load(&mut self, builder: StageBuilder) {
-        self.builder = builder;
-    }
-
-    /// Gets a handle to the map definition.
-    pub fn map(&self) -> Handle<Map> {
-        self.map.clone()
-    }
-}
+/// It is only valid if there is one or zero `MapInstance`.
+#[derive(Clone, Component, Debug, Default)]
+pub struct MapInstance;
 
 /// Loads the map.
-fn load_map(
+pub fn load_map(
     mut commands: Commands,
-    mut stage_loader: ResMut<StageLoader>,
+    stage_assets: Res<StageAssets>,
     maps: Res<Assets<Map>>,
     asset_server: Res<AssetServer>,
     mut loading: ResMut<AssetsLoading>,
+    map_instance_query: Query<Entity, With<MapInstance>>,
 ) {
     // stop loading if it has already been loaded
-    if stage_loader.map_entity.is_some() {
+    if let Ok(_) = map_instance_query.get_single() {
         return;
     }
 
     // check if the map is loaded
-    let map = match maps.get(&stage_loader.map) {
+    let map = match maps.get(&stage_assets.map) {
         Some(map) => map,
         None => return,
     };
 
     // begin loading static models with root entity.
     let map_entity = commands
-        .spawn(SpatialBundle::default())
+        .spawn((
+            SpatialBundle::default(),
+            MapInstance,
+        ))
         .id();
 
     // load directional light
@@ -207,6 +160,7 @@ fn load_map(
             transform: Transform::from_translation(map.tile_map.offset),
             ..default()
         })
+        .set_parent(map_entity)
         .with_children(|parent| {
             // loop through tiles
             for tile in map.tile_map.tiles.iter() {
@@ -233,30 +187,5 @@ fn load_map(
             })
             .set_parent(map_entity);
     }
-
-    stage_loader.map_entity = Some(map_entity);
-}
-
-/// Begins loading the stage. Map-specific loading will occur when the Map file
-/// is loaded.
-fn load_stage(
-    //mut commands: Commands,
-    mut stage_loader: ResMut<StageLoader>,
-    asset_server: Res<AssetServer>,
-    mut loading: ResMut<AssetsLoading>,
-) {
-    // start loading the map
-    let StageLoader {
-        builder,
-        map,
-        ..
-        //map_entity,
-    } = &mut *(stage_loader);
-
-    *map = asset_server.load(&builder.map);
-    loading.add(&*map);
-
-    // load operators, contingencies:
-    // lol
 }
 
