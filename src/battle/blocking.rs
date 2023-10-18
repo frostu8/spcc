@@ -14,8 +14,7 @@ pub struct BlockingPlugin;
 impl Plugin for BlockingPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(
-                Update,
+            .add_systems(Update,
                 (
                     start_blocking
                         .before(NavSystem::Steering),
@@ -25,6 +24,7 @@ impl Plugin for BlockingPlugin {
                     disengage_dead_blockers
                         .before(disable_nav_for_blocking)
                         .after(start_blocking),
+                    // TODO: do we need this???
                     reset_attack_cycles
                         .after(start_blocking),
                 )

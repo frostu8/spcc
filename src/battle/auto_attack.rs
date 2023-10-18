@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use std::time::Duration;
+use std::iter::once;
 
 use crate::stats::{find_stats, stat, ComputedStat};
 
@@ -16,13 +17,15 @@ impl Plugin for AutoAttackPlugin {
         app
             .add_systems(
                 Update,
-                tick_attack_cycle_timers,
-            )
-            .add_systems(
-                Update,
-                do_melee_auto_attack
-                    .after(tick_attack_cycle_timers)
-                    .after(TargetingSystems::SearchTargets),
+                (
+                    standby_with_no_targets
+                        .before(tick_attack_cycle_timers)
+                        .after(TargetingSystems::SearchTargets),
+                    tick_attack_cycle_timers,
+                    do_melee_auto_attack
+                        .after(tick_attack_cycle_timers)
+                        .after(TargetingSystems::SearchTargets),
+                )
             );
     }
 }
@@ -223,6 +226,31 @@ pub fn do_melee_auto_attack(
         }
 
         melee.in_frontswing = attack_cycle.in_frontswing();
+    }
+}
+
+pub fn standby_with_no_targets(
+    mut query: Query<(Entity, &mut AttackCycle)>,
+    children_query: Query<&Children>,
+    targets_query: Query<&Targets>,
+) {
+    for (entity, mut attack_cycle) in query.iter_mut() {
+        let mut has_targets = false;
+
+        for children in once(entity).chain(children_query.iter_descendants(entity)) {
+            let Ok(targets) = targets_query.get(children) else {
+                continue;
+            };
+
+            has_targets |= targets.len() > 0;
+
+            // short circuit
+            if has_targets {
+                break;
+            }
+        }
+
+        attack_cycle.set_standby(!has_targets);
     }
 }
 

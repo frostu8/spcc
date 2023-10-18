@@ -25,15 +25,14 @@ impl Plugin for TargetingPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<TargetingTree>()
-            .add_systems(
-                Update,
-                priority::sort_targets.in_set(TargetingSystems::SortTargets),
-            )
             .add_systems(Update,
-                (clear_targets, priority_blocked_targets, priority_blocker_target, search_targets)
-                    .chain()
-                    .in_set(TargetingSystems::SearchTargets)
-                    .after(TargetingSystems::SortTargets),
+                (
+                    priority::sort_targets
+                        .in_set(TargetingSystems::SortTargets),
+                    (clear_targets, priority_blocked_targets, priority_blocker_target, search_targets)
+                        .chain()
+                        .in_set(TargetingSystems::SearchTargets),
+                ).chain(),
             );
     }
 }
