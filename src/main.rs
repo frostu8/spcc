@@ -73,6 +73,7 @@ pub fn setup_tile_map(
             OperatorBundle {
                 coordinates: Coordinates::new(6, 3),
                 stats: OperatorStatBundle {
+                    def: StatBundle::new(stat::Def::new(280)),
                     atk_interval: StatBundle::new(stat::AtkInterval::new(0.5)),
                     ..default()
                 },
@@ -125,6 +126,7 @@ pub fn setup_tile_map(
                 ]),
                 stats: EnemyStatBundle {
                     hp: StatBundle::new(stat::MaxHp::new(4000.0)),
+                    atk: StatBundle::new(stat::Atk::new(600)),
                     def: StatBundle::new(stat::Def::new(80)),
                     res: StatBundle::new(stat::Res::new(0)),
                     ..default()
@@ -133,6 +135,7 @@ pub fn setup_tile_map(
                 ..default()
             },
             AttackCycle::new(Duration::from_millis(200), Duration::from_millis(150)),
+            Melee::default(),
             NavBundle::default(),
             spcc::battle::damage::DespawnOnDeath::new(Duration::from_millis(200)),
         ))

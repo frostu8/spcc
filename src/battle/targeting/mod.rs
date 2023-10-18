@@ -16,6 +16,7 @@ use bevy::prelude::*;
 use parry2d::shape::{Ball, TriMesh};
 
 use super::{BoundingCircle, Hostility};
+use super::blocking::{Blocker, Blockable};
 
 /// Targeting plugin.
 pub struct TargetingPlugin;
@@ -28,9 +29,9 @@ impl Plugin for TargetingPlugin {
                 Update,
                 priority::sort_targets.in_set(TargetingSystems::SortTargets),
             )
-            .add_systems(
-                Update,
-                search_targets
+            .add_systems(Update,
+                (clear_targets, priority_blocked_targets, priority_blocker_target, search_targets)
+                    .chain()
                     .in_set(TargetingSystems::SearchTargets)
                     .after(TargetingSystems::SortTargets),
             );
@@ -121,16 +122,80 @@ impl Default for Stealth {
     }
 }
 
+pub fn clear_targets(
+    mut query: Query<&mut Targets>,
+) {
+    for mut targets in query.iter_mut() {
+        targets.0.clear();
+    }
+}
+
+pub fn priority_blocked_targets(
+    mut query: Query<(&Targeting, &mut Targets, &Blocker, Option<&Hostility>)>,
+    targets_query: Query<(Entity, Option<&Hostility>)>,
+) {
+    for (targeting, mut found_targets, blocker, hostility) in query.iter_mut() {
+        let hostility = hostility.copied().unwrap_or_default();
+        
+        // add all blocked targets to the list
+        let can_take = targeting.max_targets - found_targets.0.len();
+
+        found_targets.0.extend(blocker
+            .blocking
+            .iter()
+            .copied()
+            .filter(|e| {
+                // check if this entity even still exists
+                // this should be the blocking systems problem but we can do
+                // this at no cost.
+                let Ok((_exists, other_hostility)) = targets_query.get(*e) else {
+                    return false;
+                };
+
+                hostility.is_hostile_to(&other_hostility.copied().unwrap_or_default())
+            })
+            .take(can_take));
+    }
+}
+
+// this system means an enemy with no range can actually attack
+pub fn priority_blocker_target(
+    mut query: Query<(&Targeting, &mut Targets, &Blockable, Option<&Hostility>)>,
+    targets_query: Query<(Entity, Option<&Hostility>)>,
+) {
+    for (targeting, mut found_targets, blockable, hostility) in query.iter_mut() {
+        // skip if we cannot add any more targets
+        if found_targets.0.len() >= targeting.max_targets {
+            continue;
+        }
+
+        let hostility = hostility.copied().unwrap_or_default();
+
+        if let Some(blocked_by) = blockable.blocked_by {
+            // check if this entity even still exists
+            // this should be the blocking systems problem but we can do
+            // this at no cost.
+            let Ok((_exists, other_hostility)) = targets_query.get(blocked_by) else {
+                continue;
+            };
+
+            if hostility.is_hostile_to(&other_hostility.copied().unwrap_or_default()) {
+                found_targets.0.push(blocked_by);
+            }
+        }
+    }
+}
+
 pub fn search_targets(
-    mut targeting_query: Query<(&GlobalTransform, &Range, &Targeting, &mut Targets, Option<&Hostility>)>,
+    mut targeting_query: Query<(&GlobalTransform, &Targeting, &mut Targets, &Range, Option<&Hostility>)>,
     targets_query: Query<(Entity, &GlobalTransform, &BoundingCircle, Option<&Hostility>, Option<&Stealth>)>,
     targets_tree: Res<TargetingTree>,
 ) {
     for (
         transform,
-        range,
         targeting,
         mut found_targets,
+        range,
         hostility,
     ) in targeting_query.iter_mut() {
         let hostility = hostility.copied().unwrap_or_default();
