@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use std::time::Duration;
 
 use crate::stats::{find_stats, stat, ComputedStat};
+use crate::ui::StatusBar;
 
 /// Plugin for damage.
 pub struct DamagePlugin;
@@ -14,20 +15,16 @@ impl Plugin for DamagePlugin {
         app
             .add_event::<DeathEvent>()
             .add_event::<DamageReceivedEvent>()
-            .add_systems(
-                Update,
+            .add_systems(Update,
                 (
                     accumulate_damage
                         .in_set(DamageSystems::AccumulateDamage),
                     despawn_on_death,
+                    disable_healthbars_for_dead_entities,
                 ),
             )
-            .add_systems(
-                PostUpdate,
-                (
-                    send_death_event,
-                    detect_maxhp_changes,
-                ),
+            .add_systems(PostUpdate,
+                (detect_maxhp_changes, send_death_event).chain(),
             );
     }
 }
@@ -227,6 +224,17 @@ pub fn accumulate_damage(
                 let current_hp = health.get();
                 health.set(current_hp - reduced);
             }
+        }
+    }
+}
+
+pub fn disable_healthbars_for_dead_entities(
+    mut query: Query<(&StatusBar, &mut Style)>,
+    now_dead_query: Query<Entity, Added<Dead>>,
+) {
+    for (status_bar, mut style) in query.iter_mut() {
+        if now_dead_query.contains(status_bar.entity()) {
+            style.display = Display::None;
         }
     }
 }

@@ -12,20 +12,17 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(
-                PostUpdate,
+            .add_systems(PostUpdate,
                 (
-                    create_status_bar
-                        .before(bevy::ui::UiSystem::Layout)
-                        .before(UiSystem::SyncStatusBar),
+                    (create_status_bar, cleanup_status_bar)
+                        .before(bevy::ui::UiSystem::Layout),
                     (
                         sync_health_bar,
                         sync_status_bar_position
-                            .after(TransformSystem::TransformPropagate)
-                            .after(create_status_bar),
+                            .after(TransformSystem::TransformPropagate),
                     )
                         .in_set(UiSystem::SyncStatusBar),
-                ),
+                ).chain(),
             );
     }
 }
@@ -40,6 +37,13 @@ pub enum UiSystem {
 #[derive(Debug, Component, Clone)]
 pub struct StatusBar {
     entity: Entity,
+}
+
+impl StatusBar {
+    /// The entity the status bar is tracking.
+    pub fn entity(&self) -> Entity {
+        self.entity
+    }
 }
 
 #[derive(Debug, Component, Clone)]
@@ -62,6 +66,21 @@ impl HealthBar {
         HealthBar {
             dampening,
             ..self
+        }
+    }
+}
+
+fn cleanup_status_bar(
+    mut commands: Commands,
+    query: Query<(Entity, &StatusBar)>,
+    exists_query: Query<&GlobalTransform>,
+) {
+    for (entity, status_bar) in query.iter() {
+        if !exists_query.contains(status_bar.entity) {
+            // delete status bar
+            commands
+                .entity(entity)
+                .despawn_recursive();
         }
     }
 }
@@ -102,20 +121,14 @@ fn sync_health_bar(
 }
 
 pub fn sync_status_bar_position(
-    mut commands: Commands,
-    mut query: Query<(Entity, &StatusBar, &mut Style)>,
+    mut query: Query<(&StatusBar, &mut Style)>,
     position_query: Query<&GlobalTransform>,
     camera_query: Query<(&GlobalTransform, &Camera)>,
 ) {
     let (camera_transform, camera) = camera_query.single(); // TODO: lol
 
-    for (status_bar_entity, status_bar, mut style) in query.iter_mut() {
+    for (status_bar, mut style) in query.iter_mut() {
         let Ok(entity_transform) = position_query.get(status_bar.entity) else {
-            // delete status bar
-            commands
-                .entity(status_bar_entity)
-                .despawn_recursive();
-
             continue;
         };
 
