@@ -71,9 +71,9 @@ pub fn setup_tile_map(
     commands
         .spawn((
             OperatorBundle {
-                coordinates: Coordinates::new(6, 3),
+                coordinates: Coordinates::new(6, 5),
                 stats: OperatorStatBundle {
-                    hp: StatBundle::new(stat::MaxHp::new(2200.0)),
+                    hp: StatBundle::new(stat::MaxHp::new(2200)),
                     def: StatBundle::new(stat::Def::new(280)),
                     atk_interval: StatBundle::new(stat::AtkInterval::new(0.5)),
                     ..default()
@@ -98,7 +98,7 @@ pub fn setup_tile_map(
                         base_color: Color::CYAN,
                         ..default()
                     }),
-                    transform: Transform::from_xyz(0.0, 0.4, 0.0),
+                    transform: Transform::from_xyz(0.0, 0.0, 0.4),
                     ..default()
                 });
 
@@ -126,7 +126,7 @@ pub fn setup_tile_map(
                     Checkpoint::at(Vec2::new(6.0, 3.0)),
                 ]),
                 stats: EnemyStatBundle {
-                    hp: StatBundle::new(stat::MaxHp::new(4000.0)),
+                    hp: StatBundle::new(stat::MaxHp::new(4000)),
                     atk: StatBundle::new(stat::Atk::new(420)),
                     def: StatBundle::new(stat::Def::new(80)),
                     res: StatBundle::new(stat::Res::new(0)),
@@ -152,7 +152,7 @@ pub fn setup_tile_map(
                         base_color: Color::RED,
                         ..default()
                     }),
-                    transform: Transform::from_xyz(0.0, 0.125, 0.0),
+                    transform: Transform::from_xyz(0.0, 0.0, 0.125),
                     ..default()
                 });
 
@@ -176,7 +176,7 @@ pub fn setup(
     // create camera
     commands.spawn((
         Camera3dBundle {
-            transform: Transform::from_xyz(0.0, 10.0, 8.0).looking_at(Vec3::Z, Vec3::Y),
+            transform: Transform::from_xyz(0.0, -8.0, 10.0).looking_at(-Vec3::Y, Vec3::Y),
             ..default()
         },
         //RaycastPickCamera::default(),

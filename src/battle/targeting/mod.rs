@@ -237,9 +237,9 @@ pub fn search_targets(
 
         let targets = possible_targets
             .map(|(e, _, _, _, _)| e)
-            .take(targeting.max_targets);
+            .take(targeting.max_targets - found_targets.len());
 
-        found_targets.0 = targets.collect();
+        found_targets.0.extend(targets);
     }
 }
 
@@ -249,7 +249,7 @@ fn global_transform_to_isometry(t: &GlobalTransform) -> parry2d::math::Isometry<
 
     parry2d::math::Isometry {
         rotation: default(),
-        translation: Vec2::new(t.translation().x, t.translation().z).into(),
+        translation: Vec2::new(t.translation().x, t.translation().y).into(),
     }
 }
 
@@ -291,13 +291,13 @@ pub fn debug_draw_range(
             Shape::Polygon(mesh) => {
                 // draw perimeter of mesh
                 for triangle in mesh.triangles() {
-                    let a = Vec3::new(triangle.a.x, 0.0, triangle.a.y);
-                    let b = Vec3::new(triangle.b.x, 0.0, triangle.b.y);
-                    let c = Vec3::new(triangle.c.x, 0.0, triangle.c.y);
+                    let a: Vec2 = triangle.a.xy().into();
+                    let b: Vec2 = triangle.b.xy().into();
+                    let c: Vec2 = triangle.c.xy().into();
 
-                    let a = transform.transform_point(a);
-                    let b = transform.transform_point(b);
-                    let c = transform.transform_point(c);
+                    let a = transform.transform_point(a.extend(0.0));
+                    let b = transform.transform_point(b.extend(0.0));
+                    let c = transform.transform_point(c.extend(0.0));
 
                     gizmos.line(a, b, color);
                     gizmos.line(b, c, color);
@@ -308,7 +308,7 @@ pub fn debug_draw_range(
                 gizmos
                     .circle(
                         transform.translation(),
-                        Vec3::Y,
+                        Vec3::Z,
                         ball.radius,
                         color,
                     );

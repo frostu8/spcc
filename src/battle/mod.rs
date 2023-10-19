@@ -73,7 +73,7 @@ fn debug_draw_bounding_circle(
         gizmos
             .circle(
                 transform.translation(),
-                Vec3::Y,
+                Vec3::Z,
                 bounding_circle.radius,
                 color,
             );

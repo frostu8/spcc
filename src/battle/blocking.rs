@@ -1,6 +1,7 @@
 //! Blocking stfuf (I hate programming) :(
 
 use bevy::prelude::*;
+use bevy::math::swizzles::*;
 
 use crate::tile_map::nav::{Nav, NavSystem};
 use crate::stats::{stat, ComputedStat};
@@ -123,10 +124,7 @@ pub fn start_blocking(
         }
 
         // project to 2D XZ plane
-        let pos = Vec2::new(
-            blockable_transform.translation().x,
-            blockable_transform.translation().z,
-        );
+        let pos = blockable_transform.translation().xy();
 
         for (
             blocker_entity,
@@ -140,10 +138,7 @@ pub fn start_blocking(
             }
 
             // project to 2D XZ plane
-            let blocker_pos = Vec2::new(
-                blocker_transform.translation().x,
-                blocker_transform.translation().z,
-            );
+            let blocker_pos = blocker_transform.translation().xy();
 
             // compare distances
             let min_distance = blockable_bounding_circle.radius + blocker_bounding_circle.radius;

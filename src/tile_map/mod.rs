@@ -112,14 +112,14 @@ impl Coordinates {
     /// Height is not a factor that is taken into account, so that is up to the
     /// client.
     pub fn local(&self, height: f32) -> Vec3 {
-        Vec3::new(self.x as f32, height, self.y as f32)
+        Vec3::new(self.x as f32, self.y as f32, height)
     }
 
     /// Approximates the tile coordinates of the local position.
     pub fn from_local(local: Vec3) -> Coordinates {
         Coordinates(IVec2 {
             x: local.x.floor() as i32,
-            y: local.z.floor() as i32,
+            y: local.y.floor() as i32,
         })
     }
 }
@@ -276,7 +276,7 @@ pub fn load_grid_assets(
     asset_server: Res<AssetServer>,
 ) {
     // create square mesh
-    grid_assets.square_mesh = meshes.add(Mesh::from(shape::Plane::from_size(1.0)));
+    grid_assets.square_mesh = meshes.add(Mesh::from(shape::Quad::new(Vec2::ONE)));
 
     // load grid indicator
     grid_assets.grid_indicator_texture = asset_server.load("system/grid_indicator.png");

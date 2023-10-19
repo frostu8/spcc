@@ -56,7 +56,7 @@ pub enum DamageType {
 #[derive(Clone, Component, Debug)]
 pub struct Health {
     hp: f32,
-    max_hp: f32, // used to track maxhp changes
+    max_hp: i32, // used to track maxhp changes
 }
 
 impl Health {
@@ -64,10 +64,10 @@ impl Health {
     ///
     /// # Panics
     /// Panics if `max_hp` is equal to or less than 0.
-    pub fn new(max_hp: f32) -> Health {
-        assert!(max_hp > 0.0);
+    pub fn new(max_hp: i32) -> Health {
+        assert!(max_hp > 0);
 
-        Health { hp: max_hp, max_hp }
+        Health { hp: max_hp as f32, max_hp }
     }
 
     /// Gets the health points of an entity.
@@ -77,7 +77,7 @@ impl Health {
 
     /// Sets the health points of an entity.
     pub fn set(&mut self, hp: f32) {
-        self.hp = hp.min(self.max_hp);
+        self.hp = hp.min(self.max_hp as f32);
     }
 
     /// Gets the healths points of an entity as a percentage.
@@ -89,7 +89,7 @@ impl Health {
 impl Default for Health {
     fn default() -> Health {
         // This default is mostly so as to not violate an invariant (max_hp <= 0)
-        Health::new(1500.0)
+        Health::new(1500)
     }
 }
 
@@ -283,7 +283,7 @@ pub fn detect_maxhp_changes(
 
         if max_hp.get() != health.max_hp {
             // adjust max hp
-            health.hp = health.hp * max_hp.get() / health.max_hp;
+            health.hp = health.hp * max_hp.get() as f32 / health.max_hp as f32;
             health.max_hp = max_hp.get();
         }
     }

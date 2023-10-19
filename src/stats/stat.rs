@@ -112,11 +112,11 @@ macro_rules! impl_stat_f32 {
 
 /// The maximum HP of an entity.
 #[derive(Clone, Component, Debug, PartialEq)]
-pub struct MaxHp(f32);
+pub struct MaxHp(i32);
 
 impl Default for MaxHp {
     fn default() -> MaxHp {
-        MaxHp(1500.0)
+        MaxHp(1500)
     }
 }
 
@@ -222,7 +222,7 @@ impl Default for Block {
 
 // maxhp must be at least one, to make division math easier in other structs,
 // since hp is typically represented as percentage of max
-impl_stat_f32!(MaxHp, min: 1.0);
+impl_stat_i32!(MaxHp, min: 1);
 
 impl_stat_i32!(Atk, min: 0);
 impl_stat_i32!(Def, min: 0);
