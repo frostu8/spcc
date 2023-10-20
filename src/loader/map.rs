@@ -149,7 +149,7 @@ pub fn load_map(
                 illuminance: map.environment.luminance,
                 ..Default::default()
             },
-            transform: Transform::default().looking_to(-Vec3::Y, Vec3::Y),
+            transform: Transform::default().looking_to(-Vec3::Z, Vec3::Y),
             ..Default::default()
         })
         .set_parent(map_entity);
