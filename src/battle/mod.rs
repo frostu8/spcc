@@ -7,6 +7,7 @@ pub mod auto_attack;
 pub mod damage;
 pub mod blocking;
 pub mod path;
+pub mod skill;
 pub mod targeting;
 
 use damage::Health;
@@ -36,6 +37,7 @@ impl PluginGroup for BattlePlugins {
             .add(blocking::BlockingPlugin)
             .add(path::PathPlugin)
             .add(targeting::TargetingPlugin)
+            .add(skill::SkillPlugin)
     }
 }
 

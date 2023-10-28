@@ -8,7 +8,9 @@ use spcc::loader::{LoadStageEvent, StageBuilder};
 use spcc::battle::{
     path::{Checkpoint, Follower},
     auto_attack::{AttackCycle, Melee},
-    targeting::Range,
+    targeting::{TargetingBundle, Range},
+    skill::{Skill, SkillBundle, OverflowBehavior, IncreaseWithTime, AutoSkillActivation},
+    Hostility,
     EnemyBundle,
     EnemyStatBundle,
     OperatorBundle,
@@ -91,6 +93,28 @@ pub fn setup_tile_map(
         ))
         .set_parent(grid)
         .with_children(|parent| {
+            // skill
+            parent
+                .spawn((
+                    SpatialBundle::default(),
+                    SkillBundle {
+                        skill: Skill::new(4.0, OverflowBehavior::Capped)
+                            .with_initial_sp(2.0),
+                        ..default()
+                    },
+                    AutoSkillActivation::one(),
+                    IncreaseWithTime,
+                    TargetingBundle::default(),
+                    Hostility::Friendly,
+                    Range::from_vertices([
+                        Vec2::new(1.5, -0.5),
+                        Vec2::new(1.5, 0.5),
+                        Vec2::new(-0.5, 0.5),
+                        Vec2::new(-0.5, -0.5),
+                    ]),
+                ));
+
+            // model
             parent
                 .spawn(PbrBundle {
                     mesh: meshes.add(shape::Cube::new(0.8).into()),

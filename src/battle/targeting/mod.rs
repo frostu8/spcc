@@ -47,6 +47,13 @@ pub enum TargetingSystems {
     SearchTargets,
 }
 
+/// A bundle for simple targeting.
+#[derive(Clone, Debug, Default, Bundle)]
+pub struct TargetingBundle {
+    pub targeting: Targeting,
+    pub targets: Targets,
+}
+
 /// The "range" of an entity.
 #[derive(Clone, Component)]
 pub struct Range {

@@ -37,6 +37,11 @@ pub struct Melee {
     in_frontswing: bool,
 }
 
+// FIXME: this component and related systems are terrible.
+// In reality, this should just be a single timer that is used up when the
+// enemy attacks. The animation system should drive this. This is just a hacky
+// solution!!! I hate it GRAAAHHH
+
 /// Basic attack cycling.
 ///
 /// Functions very similarly to skills, where a completion of an attack cycle
